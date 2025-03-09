@@ -1,9 +1,8 @@
-# Build stage with extensive debugging
-FROM golang:1.19 AS builder
+# Build stage
+FROM golang:1.23.4-alpine AS builder
 
-# Set environment variable for verbose go command output
-ENV GOFLAGS=-v
-ENV GO111MODULE=on
+# Install necessary build tools
+RUN apk add --no-cache ca-certificates git
 
 # Set working directory
 WORKDIR /app
@@ -11,37 +10,31 @@ WORKDIR /app
 # Copy go.mod and go.sum files
 COPY go.mod go.sum ./
 
-# Print debug information
-RUN pwd && ls -la && go env && go version
-
-# Install git and other build essentials
-RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Try to download dependencies with detailed errors
-RUN go mod download -x || (echo "Go mod download failed with details:" && cat /root/.cache/go-build/log.txt && exit 1)
+# Download dependencies
+RUN go mod download
 
 # Copy source code
 COPY . .
 
-# Build the application for ARM64 architecture (Raspberry Pi 5)
-RUN go build -v -ldflags="-w -s" -o urlshortener ./cmd/server
+# Build the application with production optimizations
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o urlshortener ./cmd/server
 
-# Simple runtime stage
-FROM debian:bullseye-slim
+# Install migrate tool for migrations
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
-# Install necessary packages
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates tzdata curl && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Final stage
+FROM alpine:latest
+
+# Install certificates and timezone data
+RUN apk --no-cache add ca-certificates tzdata curl && \
+    update-ca-certificates
 
 # Create a non-root user to run the application
-RUN useradd -m -s /bin/bash appuser
+RUN adduser -D -g '' appuser
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/urlshortener /app/urlshortener
+COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
 
 # Copy migrations folder
 COPY migrations /app/migrations
@@ -58,12 +51,21 @@ WORKDIR /app
 # Expose the application port
 EXPOSE 8081
 
-# Environment variables
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8081/api/health || exit 1
+
+# Environment variables will be provided by docker-compose or Coolify
+# Only set defaults for non-sensitive information
 ENV PORT=8081 \
     ENVIRONMENT=production \
     READ_TIMEOUT=30s \
     WRITE_TIMEOUT=30s \
-    IDLE_TIMEOUT=120s
+    IDLE_TIMEOUT=120s \
+    POSTGRES_MAX_CONNECTIONS=25 \
+    POSTGRES_MAX_IDLE_CONNECTIONS=5 \
+    POSTGRES_CONN_MAX_LIFETIME=15m \
+    SHORTLINK_DEFAULT_EXPIRY=30d
 
 # Run the application
-ENTRYPOINT ["/app/urlshortener"]
+ENTRYPOINT ["/app/urlshortener"] 
