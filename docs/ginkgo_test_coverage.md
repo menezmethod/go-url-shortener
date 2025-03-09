@@ -27,6 +27,7 @@ This document outlines the plan to achieve 100% test coverage for the ref_go pro
 	- [Integration with CI/CD](#integration-with-cicd)
 	- [Progress Tracking](#progress-tracking)
 	- [Next Steps](#next-steps)
+	- [Troubleshooting](#troubleshooting)
 
 ## Introduction to Ginkgo and Gomega
 
@@ -308,5 +309,39 @@ Legend:
 3. Add integration tests for critical user flows
 4. Implement coverage reporting
 5. Address any uncovered code paths
+
+## Troubleshooting
+
+### Fixing Test Failures
+
+Initial test runs revealed some discrepancies between our test assumptions and the actual implementation. Here are some tips for fixing common test issues:
+
+1. **Structure Mismatches**: Ensure your test is consistent with the actual field names and structure of the packages you're testing. For example, our initial config test had field name mismatches.
+
+2. **Environment Setup**: Some tests need proper environment setup to work. For example, config tests may require certain environment variables to be set.
+
+3. **Mock Completeness**: Make sure your mocks implement all required methods of the interface they're mocking.
+
+4. **Ginkgo Command Not Found**: If the `ginkgo` command is not found, ensure that `$GOPATH/bin` is in your PATH or use the full path to the ginkgo executable.
+
+### Running Tests Properly
+
+- Run all Ginkgo tests with coverage:
+  ```bash
+  go install github.com/onsi/ginkgo/v2/ginkgo@latest
+  $GOPATH/bin/ginkgo -r -v --cover ./...
+  ```
+
+- Run standard Go tests for specific packages:
+  ```bash
+  go test -v ./internal/config
+  ```
+
+- Generate and view coverage report:
+  ```bash
+  $GOPATH/bin/ginkgo -r -v --cover --coverprofile=coverage.out ./...
+  go tool cover -html=coverage.out -o coverage.html
+  open coverage.html
+  ```
 
 This document will be updated regularly as we make progress on implementing test coverage. 
