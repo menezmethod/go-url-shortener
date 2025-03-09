@@ -50,20 +50,9 @@ var _ = Describe("Logger", func() {
 			})
 		})
 
-		Context("with invalid log level", func() {
-			It("defaults to info level for invalid level", func() {
-				cfg.Logging.Level = "invalid_level"
-
-				zapLogger, err := logger.NewLogger(cfg)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(zapLogger).NotTo(BeNil())
-			})
-		})
-
-		Context("with invalid log format", func() {
-			It("defaults to console format for invalid format", func() {
-				cfg.Logging.Format = "invalid_format"
+		Context("with different environments", func() {
+			It("defaults to info level for other environments", func() {
+				cfg.Server.Environment = "staging"
 
 				zapLogger, err := logger.NewLogger(cfg)
 
