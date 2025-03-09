@@ -1,5 +1,9 @@
-# Build stage
+# Build stage with extensive debugging
 FROM golang:1.19 AS builder
+
+# Set environment variable for verbose go command output
+ENV GOFLAGS=-v
+ENV GO111MODULE=on
 
 # Set working directory
 WORKDIR /app
@@ -7,33 +11,37 @@ WORKDIR /app
 # Copy go.mod and go.sum files
 COPY go.mod go.sum ./
 
-# Install git (required for go mod download)
-RUN apt-get update && apt-get install -y git
+# Print debug information
+RUN pwd && ls -la && go env && go version
 
-# Download dependencies
-RUN go mod download
+# Install git and other build essentials
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Try to download dependencies with detailed errors
+RUN go mod download -x || (echo "Go mod download failed with details:" && cat /root/.cache/go-build/log.txt && exit 1)
 
 # Copy source code
 COPY . .
 
 # Build the application for ARM64 architecture (Raspberry Pi 5)
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o urlshortener ./cmd/server
+RUN go build -v -ldflags="-w -s" -o urlshortener ./cmd/server
 
-# Install migrate tool
-RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-
-# Final stage
-FROM arm64v8/alpine:3.16
+# Simple runtime stage
+FROM debian:bullseye-slim
 
 # Install necessary packages
-RUN apk add --no-cache ca-certificates tzdata curl
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates tzdata curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user to run the application
-RUN adduser -D -g '' appuser
+RUN useradd -m -s /bin/bash appuser
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/urlshortener /app/urlshortener
-COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
 
 # Copy migrations folder
 COPY migrations /app/migrations
@@ -50,20 +58,12 @@ WORKDIR /app
 # Expose the application port
 EXPOSE 8081
 
-# Add healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8081/api/health || exit 1
-
-# Environment variables will be provided by docker-compose or Coolify
+# Environment variables
 ENV PORT=8081 \
     ENVIRONMENT=production \
     READ_TIMEOUT=30s \
     WRITE_TIMEOUT=30s \
-    IDLE_TIMEOUT=120s \
-    POSTGRES_MAX_CONNECTIONS=25 \
-    POSTGRES_MAX_IDLE_CONNECTIONS=5 \
-    POSTGRES_CONN_MAX_LIFETIME=15m \
-    SHORTLINK_DEFAULT_EXPIRY=30d
+    IDLE_TIMEOUT=120s
 
 # Run the application
 ENTRYPOINT ["/app/urlshortener"]
