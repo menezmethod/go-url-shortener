@@ -1,8 +1,5 @@
 # Build stage
-FROM golang:1.19-alpine AS builder
-
-# Install necessary build tools
-RUN apk add --no-cache ca-certificates git
+FROM golang:1.19 AS builder
 
 # Set working directory
 WORKDIR /app
@@ -10,22 +7,25 @@ WORKDIR /app
 # Copy go.mod and go.sum files
 COPY go.mod go.sum ./
 
+# Install git (required for go mod download)
+RUN apt-get update && apt-get install -y git
+
 # Download dependencies
 RUN go mod download
 
 # Copy source code
 COPY . .
 
-# Build the application with production optimizations
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o urlshortener ./cmd/server
+# Build the application for ARM64 architecture (Raspberry Pi 5)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o urlshortener ./cmd/server
 
-# Install migrate tool for migrations
+# Install migrate tool
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # Final stage
-FROM alpine:3.16
+FROM arm64v8/alpine:3.16
 
-# Install certificates and timezone data
+# Install necessary packages
 RUN apk add --no-cache ca-certificates tzdata curl
 
 # Create a non-root user to run the application
@@ -55,7 +55,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8081/api/health || exit 1
 
 # Environment variables will be provided by docker-compose or Coolify
-# Only set defaults for non-sensitive information
 ENV PORT=8081 \
     ENVIRONMENT=production \
     READ_TIMEOUT=30s \
