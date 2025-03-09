@@ -66,7 +66,8 @@ EXPOSE 8081
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8081/api/health || exit 1
+  CMD curl -f http://localhost:8081/api/health && \
+      curl -f http://localhost:8081/api/swagger-health || exit 1
 
 # Environment variables will be provided by docker-compose or Coolify
 # Only set defaults for non-sensitive information

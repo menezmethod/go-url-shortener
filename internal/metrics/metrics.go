@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -93,6 +94,9 @@ func (m *Metrics) RecordResponse(path string, statusCode int, duration time.Dura
 
 // RecordRedirect records a link redirect
 func (m *Metrics) RecordRedirect(linkID string) {
+	// Add a println for debugging to see if this method is being called
+	fmt.Printf("[DEBUG] RecordRedirect called for link ID: %s\n", linkID)
+
 	atomic.AddInt64(&m.totalRedirects, 1)
 
 	m.redirectsByLinkMu.Lock()
@@ -231,6 +235,10 @@ func (m *Metrics) SetCacheTotalItems(count int64) {
 func (m *Metrics) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Format metrics for Prometheus scraping or as JSON for manual review
 	w.Header().Set("Content-Type", "text/plain")
+
+	// Add a println for debugging to show the current redirect count
+	totalRedirects := atomic.LoadInt64(&m.totalRedirects)
+	fmt.Printf("[DEBUG] Current totalRedirects value: %d\n", totalRedirects)
 
 	metrics := []struct {
 		name  string

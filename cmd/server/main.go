@@ -58,6 +58,32 @@ func main() {
 	// Replace global logger
 	zap.ReplaceGlobals(zapLogger)
 
+	// Log Swagger initialization
+	zapLogger.Info("Checking Swagger documentation")
+
+	// Check if swagger docs package is properly imported
+	_, imported := interface{}(nil).(interface{ f() interface{} })
+	if !imported {
+		zapLogger.Info("Swagger docs package import check - this log will always show")
+	}
+
+	// Check docs directory
+	if _, err := os.Stat("docs"); os.IsNotExist(err) {
+		zapLogger.Error("Docs directory not found", zap.Error(err))
+	} else {
+		zapLogger.Info("Docs directory found")
+
+		// Check for specific Swagger files
+		files := []string{"docs/swagger.json", "docs/swagger.yaml", "docs/docs.go"}
+		for _, file := range files {
+			if _, err := os.Stat(file); os.IsNotExist(err) {
+				zapLogger.Error("Swagger file not found", zap.String("file", file), zap.Error(err))
+			} else {
+				zapLogger.Info("Swagger file found", zap.String("file", file))
+			}
+		}
+	}
+
 	// Set Gin mode based on environment
 	if cfg.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)

@@ -108,21 +108,30 @@ curl -X POST http://localhost:8081/api/links \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{
     "url": "https://example.com/very/long/url/that/needs/shortening",
-    "custom_code": "mylink",
+    "custom_alias": "mylink",
     "expiration_date": "2023-12-31T23:59:59Z"
   }'
 ```
+
+> **Note**: Use `custom_alias` to specify a custom code for your short URL. If not provided, the system will generate a random code.
 
 Response:
 ```json
 {
   "id": "5f3a4bc2-1234-5678-abcd-1234567890ab",
-  "original_url": "https://example.com/very/long/url/that/needs/shortening",
   "code": "mylink",
-  "short_url": "http://localhost:8081/mylink",
-  "created_at": "2023-01-15T14:30:15Z",
+  "url_id": "15ebcec2-d0a9-4902-af30-e9b1f5645a2b",
   "expiration_date": "2023-12-31T23:59:59Z",
-  "is_active": true
+  "is_active": true,
+  "created_at": "2023-01-15T14:30:15Z",
+  "updated_at": "2023-01-15T14:30:15Z",
+  "url": {
+    "id": "15ebcec2-d0a9-4902-af30-e9b1f5645a2b",
+    "original_url": "https://example.com/very/long/url/that/needs/shortening",
+    "hash": "5a4519f4d7a77547b2adc9801e8e8241a1c3c2b2d53ef4709affee318ee4fdca",
+    "created_at": "2023-01-15T14:30:15Z",
+    "updated_at": "2023-01-15T14:30:15Z"
+  }
 }
 ```
 
@@ -165,6 +174,28 @@ curl -X PUT http://localhost:8081/api/links/mylink \
 curl -X DELETE http://localhost:8081/api/links/mylink \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
+
+## Known Issues and Troubleshooting
+
+### URL Redirection
+
+The redirect functionality works best with custom aliases. System-generated codes may occasionally fail to redirect properly. If you encounter issues with a system-generated code, consider creating a new short URL with a custom alias.
+
+### Swagger Documentation
+
+If the Swagger documentation page appears blank, it may need to be regenerated using:
+
+```bash
+# Install swag if not already installed
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# Generate docs
+swag init -g cmd/server/main.go
+```
+
+### Metrics
+
+The metrics endpoint at `/metrics` provides insights into service operation. Note that the redirect counter (`url_shortener_redirects_total`) may not always accurately reflect the actual number of redirects performed.
 
 ## Configuration Options
 

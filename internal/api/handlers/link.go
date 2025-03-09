@@ -11,6 +11,7 @@ import (
 
 	"github.com/menezmethod/ref_go/internal/api/middleware"
 	"github.com/menezmethod/ref_go/internal/domain"
+	"github.com/menezmethod/ref_go/internal/metrics"
 )
 
 // LinkService defines the interface for link-related operations
@@ -29,13 +30,15 @@ type LinkService interface {
 type LinkHandler struct {
 	linkService LinkService
 	baseURL     string
+	metrics     *metrics.Metrics
 }
 
 // NewLinkHandler creates a new link handler
-func NewLinkHandler(linkService LinkService, baseURL string) *LinkHandler {
+func NewLinkHandler(linkService LinkService, baseURL string, metrics *metrics.Metrics) *LinkHandler {
 	return &LinkHandler{
 		linkService: linkService,
 		baseURL:     baseURL,
+		metrics:     metrics,
 	}
 }
 
@@ -309,12 +312,18 @@ func (h *LinkHandler) GetLinkStats(c *gin.Context) {
 func (h *LinkHandler) RedirectLink(c *gin.Context) {
 	logger := middleware.GetLogger(c)
 
+	logger.Debug("Starting redirect process")
+
 	// Extract code from URL
 	code := c.Param("code")
 	if code == "" {
+		logger.Info("Empty code parameter received")
 		c.Status(http.StatusNotFound)
 		return
 	}
+
+	logger.Info("Redirect request received",
+		zap.String("code", code))
 
 	// Get link by code
 	link, err := h.linkService.GetShortLinkByCode(c.Request.Context(), code)
@@ -326,6 +335,10 @@ func (h *LinkHandler) RedirectLink(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
+
+	logger.Info("Link found for redirect",
+		zap.String("link_id", link.ID),
+		zap.String("original_url", link.URL.OriginalURL))
 
 	// Check if link is active
 	if !link.IsActive {
@@ -359,9 +372,31 @@ func (h *LinkHandler) RedirectLink(c *gin.Context) {
 				zap.String("link_id", link.ID),
 				zap.Error(err),
 			)
+		} else {
+			logger.Info("Click recorded successfully",
+				zap.String("link_id", link.ID))
 		}
 	}()
 
+	// Log before redirect
+	logger.Info("About to perform redirect",
+		zap.String("link_id", link.ID),
+		zap.String("original_url", link.URL.OriginalURL),
+		zap.String("code", code))
+
+	// Record redirect in metrics
+	if h.metrics != nil {
+		logger.Info("Recording redirect in metrics", zap.String("link_id", link.ID))
+		h.metrics.RecordRedirect(link.ID)
+	} else {
+		logger.Error("Metrics collector is nil, cannot record redirect")
+	}
+
 	// Redirect to original URL
 	c.Redirect(http.StatusMovedPermanently, link.URL.OriginalURL)
+
+	// Log after redirect
+	logger.Info("Redirect completed",
+		zap.String("link_id", link.ID),
+		zap.String("destination", link.URL.OriginalURL))
 }

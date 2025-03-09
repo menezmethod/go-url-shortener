@@ -2,6 +2,8 @@ package router
 
 import (
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -53,7 +55,7 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 
 	// Create handlers
 	authHandler := handlers.NewAuthHandler(tokenService)
-	linkHandler := handlers.NewLinkHandler(shortenerService, cfg.Server.BaseURL)
+	linkHandler := handlers.NewLinkHandler(shortenerService, cfg.Server.BaseURL, metricsCollector)
 
 	// Apply global middleware
 	router.Use(middleware.RequestID())
@@ -67,6 +69,28 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 	// Register health check and readiness endpoints (unprotected)
 	router.GET("/api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "OK")
+	})
+
+	// Add a specific Swagger health check endpoint
+	router.GET("/api/swagger-health", func(c *gin.Context) {
+		// Check if swagger.json exists
+		swaggerPath := "./docs/swagger.json"
+		if _, err := os.Stat(swaggerPath); os.IsNotExist(err) {
+			logger.Error("Swagger JSON file not found", zap.String("path", swaggerPath), zap.Error(err))
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":  "error",
+				"message": "Swagger documentation is not available",
+				"error":   err.Error(),
+			})
+			return
+		}
+
+		// Return success
+		c.JSON(http.StatusOK, gin.H{
+			"status":   "ok",
+			"message":  "Swagger documentation is available",
+			"docs_url": "/swagger/index.html",
+		})
 	})
 
 	router.GET("/api/ready", func(c *gin.Context) {
@@ -96,7 +120,48 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 	})
 
 	// Register Swagger endpoint
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/swagger/*any", func(c *gin.Context) {
+		path := c.Request.URL.Path
+		logger.Info("Swagger request received",
+			zap.String("path", path),
+			zap.String("method", c.Request.Method),
+			zap.String("client_ip", c.ClientIP()),
+		)
+
+		// Check if this is a request for the doc.json file
+		if strings.HasSuffix(path, "doc.json") {
+			logger.Info("Swagger doc.json request detected")
+
+			// Try different potential paths for doc.json
+			potentialPaths := []string{
+				"./docs/swagger.json",
+				"/app/docs/swagger.json", // Docker path
+				"../docs/swagger.json",
+				"../../docs/swagger.json",
+				"docs/swagger.json",
+			}
+
+			var foundPath string
+			for _, p := range potentialPaths {
+				if _, err := os.Stat(p); err == nil {
+					foundPath = p
+					logger.Info("Found Swagger JSON file", zap.String("path", p))
+					break
+				}
+			}
+
+			// If found, serve the file directly
+			if foundPath != "" {
+				c.File(foundPath)
+				return
+			} else {
+				logger.Error("Swagger JSON file not found in any of the potential locations")
+			}
+		}
+
+		// Proceed with the standard handler
+		ginSwagger.WrapHandler(swaggerFiles.Handler)(c)
+	})
 
 	// Register metrics endpoint (public)
 	router.GET("/metrics", func(c *gin.Context) {
