@@ -2,13 +2,9 @@ package router
 
 import (
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 
 	"github.com/menezmethod/ref_go/internal/api/handlers"
@@ -68,28 +64,37 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 
 	// Register health check and readiness endpoints (unprotected)
 	router.GET("/api/health", func(c *gin.Context) {
-		c.String(http.StatusOK, "OK")
-	})
+		// Check database connectivity
+		dbStatus := "ok"
+		dbError := ""
 
-	// Add a specific Swagger health check endpoint
-	router.GET("/api/swagger-health", func(c *gin.Context) {
-		// Check if swagger.json exists
-		swaggerPath := "./docs/swagger.json"
-		if _, err := os.Stat(swaggerPath); os.IsNotExist(err) {
-			logger.Error("Swagger JSON file not found", zap.String("path", swaggerPath), zap.Error(err))
+		// Perform database health check
+		if err := database.HealthCheck(c.Request.Context()); err != nil {
+			dbStatus = "error"
+			dbError = err.Error()
+			logger.Error("Database health check failed", zap.Error(err))
 			c.JSON(http.StatusServiceUnavailable, gin.H{
 				"status":  "error",
-				"message": "Swagger documentation is not available",
-				"error":   err.Error(),
+				"message": "Service is not healthy",
+				"checks": gin.H{
+					"database": gin.H{
+						"status": dbStatus,
+						"error":  dbError,
+					},
+				},
 			})
 			return
 		}
 
-		// Return success
+		// Return healthy response
 		c.JSON(http.StatusOK, gin.H{
-			"status":   "ok",
-			"message":  "Swagger documentation is available",
-			"docs_url": "/swagger/index.html",
+			"status":  "ok",
+			"message": "Service is healthy",
+			"checks": gin.H{
+				"database": gin.H{
+					"status": dbStatus,
+				},
+			},
 		})
 	})
 
@@ -98,7 +103,11 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 		ctx := c.Request.Context()
 		if err := database.HealthCheck(ctx); err != nil {
 			logger.Error("Database health check failed", zap.Error(err))
-			c.String(http.StatusServiceUnavailable, "Database connection error")
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":  "error",
+				"message": "Service is not ready",
+				"reason":  "Database connection error",
+			})
 			return
 		}
 
@@ -106,61 +115,28 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 		upToDate, err := db.CheckMigrations(database.DB)
 		if err != nil {
 			logger.Error("Migration check failed", zap.Error(err))
-			c.String(http.StatusServiceUnavailable, "Database migration check failed")
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":  "error",
+				"message": "Service is not ready",
+				"reason":  "Database migration check failed",
+			})
 			return
 		}
 
 		if !upToDate {
 			logger.Error("Database migrations are not up to date")
-			c.String(http.StatusServiceUnavailable, "Database migrations are not up to date")
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":  "error",
+				"message": "Service is not ready",
+				"reason":  "Database migrations are not up to date",
+			})
 			return
 		}
 
-		c.String(http.StatusOK, "Ready")
-	})
-
-	// Register Swagger endpoint
-	router.GET("/swagger/*any", func(c *gin.Context) {
-		path := c.Request.URL.Path
-		logger.Info("Swagger request received",
-			zap.String("path", path),
-			zap.String("method", c.Request.Method),
-			zap.String("client_ip", c.ClientIP()),
-		)
-
-		// Check if this is a request for the doc.json file
-		if strings.HasSuffix(path, "doc.json") {
-			logger.Info("Swagger doc.json request detected")
-
-			// Try different potential paths for doc.json
-			potentialPaths := []string{
-				"./docs/swagger.json",
-				"/app/docs/swagger.json", // Docker path
-				"../docs/swagger.json",
-				"../../docs/swagger.json",
-				"docs/swagger.json",
-			}
-
-			var foundPath string
-			for _, p := range potentialPaths {
-				if _, err := os.Stat(p); err == nil {
-					foundPath = p
-					logger.Info("Found Swagger JSON file", zap.String("path", p))
-					break
-				}
-			}
-
-			// If found, serve the file directly
-			if foundPath != "" {
-				c.File(foundPath)
-				return
-			} else {
-				logger.Error("Swagger JSON file not found in any of the potential locations")
-			}
-		}
-
-		// Proceed with the standard handler
-		ginSwagger.WrapHandler(swaggerFiles.Handler)(c)
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "ok",
+			"message": "Service is ready",
+		})
 	})
 
 	// Register metrics endpoint (public)
