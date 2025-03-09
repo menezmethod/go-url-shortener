@@ -1,7 +1,16 @@
 package domain
 
 import (
+	"errors"
 	"time"
+)
+
+// Common errors
+var (
+	ErrNotFound   = errors.New("resource not found")
+	ErrConflict   = errors.New("resource already exists")
+	ErrForbidden  = errors.New("operation forbidden")
+	ErrValidation = errors.New("validation error")
 )
 
 // URL represents a stored URL in the system
@@ -67,4 +76,35 @@ type UpdateShortLinkRequest struct {
 	CustomAlias    *string    `json:"custom_alias,omitempty"`
 	ExpirationDate *time.Time `json:"expiration_date,omitempty"`
 	IsActive       *bool      `json:"is_active,omitempty"`
+}
+
+// Link represents a URL shortening link
+type Link struct {
+	ID          string    `json:"id"`
+	UserID      string    `json:"user_id"`
+	OriginalURL string    `json:"original_url"`
+	ShortURL    string    `json:"short_url"`
+	Visits      int       `json:"visits"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// Click represents a visit to a shortened link
+type Click struct {
+	ID        string    `json:"id"`
+	LinkID    string    `json:"link_id"`
+	UserAgent string    `json:"user_agent"`
+	Referer   string    `json:"referer"`
+	IPAddress string    `json:"ip_address"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// User represents a user of the system
+type User struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Password  string    `json:"password,omitempty"`
+	IsAdmin   bool      `json:"is_admin"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

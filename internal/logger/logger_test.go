@@ -19,20 +19,13 @@ func TestLogger(t *testing.T) {
 var _ = Describe("Logger", func() {
 	Describe("NewLogger", func() {
 		var cfg *config.Config
-		var err error
 
 		BeforeEach(func() {
 			// Set up environment variables
 			os.Setenv("LOG_LEVEL", "debug")
-			os.Setenv("LOG_FORMAT", "console")
-			os.Setenv("SERVER_ENVIRONMENT", "development")
 
 			// Create a minimal config for testing
 			cfg = &config.Config{
-				Logging: config.LoggingConfig{
-					Level:  "debug",
-					Format: "console",
-				},
 				Server: config.ServerConfig{
 					Environment: "development",
 				},
@@ -49,7 +42,6 @@ var _ = Describe("Logger", func() {
 
 			It("creates a production logger when environment is production", func() {
 				cfg.Server.Environment = "production"
-				cfg.Logging.Format = "json"
 
 				zapLogger, err := logger.NewLogger(cfg)
 
