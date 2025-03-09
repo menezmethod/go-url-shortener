@@ -98,22 +98,18 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 	// Register Swagger endpoint
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Register metrics endpoint (protected)
-	metricsGroup := router.Group("/metrics")
-	metricsGroup.Use(middleware.Authentication(tokenService))
-	{
-		metricsGroup.GET("", func(c *gin.Context) {
-			// Update short link count before serving metrics
-			count, err := linkRepo.Count(c.Request.Context())
-			if err != nil {
-				logger.Error("Failed to get short link count", zap.Error(err))
-			} else {
-				metricsCollector.SetShortLinkCount(int64(count))
-			}
+	// Register metrics endpoint (public)
+	router.GET("/metrics", func(c *gin.Context) {
+		// Update short link count before serving metrics
+		count, err := linkRepo.Count(c.Request.Context())
+		if err != nil {
+			logger.Error("Failed to get short link count", zap.Error(err))
+		} else {
+			metricsCollector.SetShortLinkCount(int64(count))
+		}
 
-			metricsCollector.ServeHTTP(c.Writer, c.Request)
-		})
-	}
+		metricsCollector.ServeHTTP(c.Writer, c.Request)
+	})
 
 	// Register auth routes
 	router.POST("/api/auth/token", authHandler.GenerateToken)

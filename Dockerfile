@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23.4-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23.4-alpine AS builder
 
 # Install necessary build tools
 RUN apk add --no-cache ca-certificates git
@@ -16,14 +16,26 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application for ARM64 architecture
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o urlshortener ./cmd/server
+# Install swag
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
+# Generate Swagger docs
+RUN swag init -g cmd/server/main.go -o docs
+
+# Set build arguments for architecture
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+# Build the application with dynamic architecture support
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-arm64} go build -ldflags="-w -s" -o urlshortener ./cmd/server
 
 # Install migrate tool for migrations
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # Final stage
-FROM arm64v8/alpine:latest
+FROM --platform=$TARGETPLATFORM arm64v8/alpine:latest
 
 # Install certificates and timezone data
 RUN apk --no-cache add ca-certificates tzdata curl && \
@@ -36,7 +48,8 @@ RUN adduser -D -g '' appuser
 COPY --from=builder /app/urlshortener /app/urlshortener
 COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
 
-# Copy migrations folder
+# Copy docs and migrations folders
+COPY --from=builder /app/docs /app/docs
 COPY migrations /app/migrations
 
 # Set the ownership of the application to appuser
@@ -65,7 +78,8 @@ ENV PORT=8081 \
     POSTGRES_MAX_CONNECTIONS=25 \
     POSTGRES_MAX_IDLE_CONNECTIONS=5 \
     POSTGRES_CONN_MAX_LIFETIME=15m \
-    SHORTLINK_DEFAULT_EXPIRY=30d
+    SHORTLINK_DEFAULT_EXPIRY=30d \
+    BASE_URL=https://r.menezmethod.com
 
 # Run the application
 ENTRYPOINT ["/app/urlshortener"] 

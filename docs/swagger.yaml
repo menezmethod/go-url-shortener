@@ -9,6 +9,62 @@ definitions:
       url:
         type: string
     type: object
+  domain.LinkClick:
+    properties:
+      browser:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      created_at:
+        type: string
+      device:
+        type: string
+      id:
+        type: string
+      ip_address:
+        type: string
+      os:
+        type: string
+      referrer:
+        type: string
+      short_link_id:
+        type: string
+      user_agent:
+        type: string
+    type: object
+  domain.LinkStats:
+    properties:
+      clicks_by_day:
+        additionalProperties:
+          type: integer
+        type: object
+      last_clicked:
+        type: string
+      recent_clicks:
+        items:
+          $ref: '#/definitions/domain.LinkClick'
+        type: array
+      top_browsers:
+        additionalProperties:
+          type: integer
+        type: object
+      top_devices:
+        additionalProperties:
+          type: integer
+        type: object
+      top_os:
+        additionalProperties:
+          type: integer
+        type: object
+      top_referrers:
+        additionalProperties:
+          type: integer
+        type: object
+      total_clicks:
+        type: integer
+    type: object
   domain.ShortLink:
     properties:
       code:
@@ -45,6 +101,15 @@ definitions:
       updated_at:
         type: string
     type: object
+  domain.UpdateShortLinkRequest:
+    properties:
+      custom_alias:
+        type: string
+      expiration_date:
+        type: string
+      is_active:
+        type: boolean
+    type: object
   handlers.TokenRequest:
     properties:
       master_password:
@@ -59,7 +124,7 @@ definitions:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
     type: object
-host: localhost:8081
+host: r.menezmethod.com
 info:
   contact:
     email: support@example.com
@@ -153,6 +218,172 @@ paths:
       security:
       - BearerAuth: []
       summary: Create a new short link
+      tags:
+      - links
+  /links/{code}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a short link by its code
+      parameters:
+      - description: Short link code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No content
+        "400":
+          description: Invalid code
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Link not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a short link
+      tags:
+      - links
+    get:
+      consumes:
+      - application/json
+      description: Get details of a short link using its code
+      parameters:
+      - description: Short link code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Link details
+          schema:
+            $ref: '#/definitions/domain.ShortLink'
+        "400":
+          description: Invalid code
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Link not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a short link by code
+      tags:
+      - links
+    put:
+      consumes:
+      - application/json
+      description: Update properties of an existing short link
+      parameters:
+      - description: Short link code
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: Update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateShortLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated link
+          schema:
+            $ref: '#/definitions/domain.ShortLink'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Link not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a short link
+      tags:
+      - links
+  /links/{code}/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get usage statistics for a short link
+      parameters:
+      - description: Short link code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Link statistics
+          schema:
+            $ref: '#/definitions/domain.LinkStats'
+        "400":
+          description: Invalid code
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Link not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get link statistics
       tags:
       - links
 schemes:

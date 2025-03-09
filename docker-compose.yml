@@ -24,6 +24,7 @@ services:
       - POSTGRES_MAX_IDLE_CONNECTIONS=${POSTGRES_MAX_IDLE_CONNECTIONS:-5}
       - POSTGRES_CONN_MAX_LIFETIME=${POSTGRES_CONN_MAX_LIFETIME:-15m}
       - SHORTLINK_DEFAULT_EXPIRY=${SHORTLINK_DEFAULT_EXPIRY:-30d}
+      - BASE_URL=${BASE_URL:-https://r.menezmethod.com}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/api/health"]
       interval: 30s

@@ -33,7 +33,7 @@ import (
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
 
-// @host localhost:8081
+// @host r.menezmethod.com
 // @BasePath /api
 // @schemes http https
 
