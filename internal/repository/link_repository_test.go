@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/lib/pq"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/menezmethod/ref_go/internal/common"
 	"github.com/menezmethod/ref_go/internal/domain"
 	"github.com/menezmethod/ref_go/internal/repository"
 	"github.com/menezmethod/ref_go/internal/testutils/mocks"
@@ -93,7 +95,7 @@ var _ = Describe("LinkRepository", func() {
 
 				err := repo.Create(link)
 				Expect(err).To(HaveOccurred())
-				// In a real implementation, we'd expect a domain.ErrConflict error here
+				Expect(err).To(Equal(domain.ErrConflict))
 			})
 		})
 	})
@@ -101,7 +103,7 @@ var _ = Describe("LinkRepository", func() {
 	Describe("GetByID", func() {
 		Context("when the link exists", func() {
 			BeforeEach(func() {
-				// Create mock row
+				// Create mock row with scan implementation
 				row := &mocks.SQLRowMock{
 					ScanFunc: func(dest ...interface{}) error {
 						// Set the values in the destination pointers
@@ -110,12 +112,16 @@ var _ = Describe("LinkRepository", func() {
 						*dest[2].(*string) = "https://example.com"
 						*dest[3].(*string) = "abc123"
 						*dest[4].(*int) = 10
-						// For timestamps and other fields, you would set them accordingly
+						// Timestamps
+						now := time.Now()
+						*dest[5].(*time.Time) = now
+						*dest[6].(*time.Time) = now
 						return nil
 					},
 				}
 
-				mockDB.QueryRowFunc = func(query string, args ...interface{}) *sql.Row {
+				// Set the QueryRowFunc to return our mock scanner
+				mockDB.QueryRowFunc = func(query string, args ...interface{}) common.Scanner {
 					return row
 				}
 			})
@@ -135,12 +141,15 @@ var _ = Describe("LinkRepository", func() {
 
 		Context("when the link doesn't exist", func() {
 			BeforeEach(func() {
-				mockDB.QueryRowFunc = func(query string, args ...interface{}) *sql.Row {
-					return &mocks.SQLRowMock{
-						ScanFunc: func(dest ...interface{}) error {
-							return sql.ErrNoRows
-						},
-					}
+				// Create mock row that returns ErrNoRows
+				row := &mocks.SQLRowMock{
+					ScanFunc: func(dest ...interface{}) error {
+						return sql.ErrNoRows
+					},
+				}
+
+				mockDB.QueryRowFunc = func(query string, args ...interface{}) common.Scanner {
+					return row
 				}
 			})
 
@@ -148,7 +157,7 @@ var _ = Describe("LinkRepository", func() {
 				link, err := repo.GetByID("non-existent-id")
 
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(Equal(sql.ErrNoRows))
+				Expect(err).To(Equal(domain.ErrNotFound))
 				Expect(link).To(BeNil())
 			})
 		})

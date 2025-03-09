@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// LinkService defines the interface for link service
-type LinkService interface {
+// MockLinkService defines the interface for link service testing
+type MockLinkService interface {
 	CreateLink(req service.CreateLinkRequest) (*domain.Link, error)
 	GetLink(id string) (*domain.Link, error)
 	GetLinkByShortURL(shortURL string) (*domain.Link, error)
@@ -22,24 +22,24 @@ type LinkService interface {
 	GetClicks(linkID string, page, perPage int) ([]*domain.Click, int, error)
 }
 
-// LinkHandler handles HTTP requests related to links
-type LinkHandler struct {
+// MockLinkHandler handles HTTP requests related to links for testing
+type MockLinkHandler struct {
 	cfg     *config.Config
 	logger  *zap.Logger
-	linkSvc LinkService
+	linkSvc MockLinkService
 }
 
-// NewLinkHandler creates a new LinkHandler
-func NewLinkHandler(cfg *config.Config, logger *zap.Logger, linkSvc LinkService) *LinkHandler {
-	return &LinkHandler{
+// NewMockLinkHandler creates a new MockLinkHandler for testing
+func NewMockLinkHandler(cfg *config.Config, logger *zap.Logger, linkSvc MockLinkService) *MockLinkHandler {
+	return &MockLinkHandler{
 		cfg:     cfg,
 		logger:  logger,
 		linkSvc: linkSvc,
 	}
 }
 
-// CreateLink handles the creation of a new link
-func (h *LinkHandler) CreateLink(c *gin.Context) {
+// CreateLinkForTest handles the creation of a new link for testing
+func (h *MockLinkHandler) CreateLinkForTest(c *gin.Context) {
 	var req struct {
 		OriginalURL string `json:"original_url" binding:"required"`
 		CustomAlias string `json:"custom_alias,omitempty"`
@@ -79,8 +79,8 @@ func (h *LinkHandler) CreateLink(c *gin.Context) {
 	c.JSON(http.StatusCreated, link)
 }
 
-// GetLink handles the retrieval of a link by ID
-func (h *LinkHandler) GetLink(c *gin.Context) {
+// GetLinkForTest handles the retrieval of a link by ID for testing
+func (h *MockLinkHandler) GetLinkForTest(c *gin.Context) {
 	id := c.Param("id")
 	userID, _ := c.Get("user_id")
 

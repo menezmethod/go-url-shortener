@@ -5,14 +5,20 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/menezmethod/ref_go/internal/common"
 	"github.com/menezmethod/ref_go/internal/domain"
 )
+
+// Scanner is an interface for the Scan method that both sql.Row and sql.Rows implement
+type Scanner interface {
+	Scan(dest ...interface{}) error
+}
 
 // DB is an interface for database operations
 type DB interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRow(query string, args ...interface{}) Scanner
 	Begin() (*sql.Tx, error)
 	Prepare(query string) (*sql.Stmt, error)
 	Ping() error
@@ -24,11 +30,11 @@ type DB interface {
 
 // PostgresLinkRepository implements LinkRepository for PostgreSQL
 type PostgresLinkRepository struct {
-	db DB
+	db common.DB
 }
 
 // NewPostgresLinkRepository creates a new PostgresLinkRepository
-func NewPostgresLinkRepository(db DB) *PostgresLinkRepository {
+func NewPostgresLinkRepository(db common.DB) *PostgresLinkRepository {
 	return &PostgresLinkRepository{
 		db: db,
 	}

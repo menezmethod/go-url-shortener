@@ -9,30 +9,30 @@ import (
 	"go.uber.org/zap"
 )
 
-// AuthService defines the interface for auth service
-type AuthService interface {
+// MockAuthService defines the interface for auth service testing
+type MockAuthService interface {
 	ValidateToken(token string) (string, error)
 	IsAdmin(userID string) bool
 }
 
-// AuthMiddleware handles authentication and authorization
-type AuthMiddleware struct {
+// MockAuthMiddleware handles authentication and authorization for testing
+type MockAuthMiddleware struct {
 	cfg     *config.Config
 	logger  *zap.Logger
-	authSvc AuthService
+	authSvc MockAuthService
 }
 
-// NewAuthMiddleware creates a new AuthMiddleware
-func NewAuthMiddleware(cfg *config.Config, logger *zap.Logger, authSvc AuthService) *AuthMiddleware {
-	return &AuthMiddleware{
+// NewMockAuthMiddleware creates a new MockAuthMiddleware for testing
+func NewMockAuthMiddleware(cfg *config.Config, logger *zap.Logger, authSvc MockAuthService) *MockAuthMiddleware {
+	return &MockAuthMiddleware{
 		cfg:     cfg,
 		logger:  logger,
 		authSvc: authSvc,
 	}
 }
 
-// RequireAuth ensures that a valid JWT token is provided
-func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
+// RequireAuthForTest ensures that a valid JWT token is provided (for testing)
+func (m *MockAuthMiddleware) RequireAuthForTest() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
@@ -67,8 +67,8 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	}
 }
 
-// AdminOnly ensures that the user is an admin
-func (m *AuthMiddleware) AdminOnly() gin.HandlerFunc {
+// AdminOnlyForTest ensures that the user is an admin (for testing)
+func (m *MockAuthMiddleware) AdminOnlyForTest() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, exists := c.Get("user_id")
 		if !exists {

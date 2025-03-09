@@ -28,7 +28,7 @@ var _ = Describe("AuthMiddleware", func() {
 		authSvc  *MockAuthService
 		cfg      *config.Config
 		logger   *zap.Logger
-		mw       *middleware.AuthMiddleware
+		mw       *middleware.MockAuthMiddleware
 	)
 
 	BeforeEach(func() {
@@ -44,14 +44,13 @@ var _ = Describe("AuthMiddleware", func() {
 
 		// Create test config
 		cfg = &config.Config{
-			Auth: config.AuthConfig{
-				JWTSecret: "test_secret",
-				JWTExpiry: 0, // Not needed for tests
+			Security: config.SecurityConfig{
+				MasterPassword: "test_secret",
 			},
 		}
 
 		// Create middleware
-		mw = middleware.NewAuthMiddleware(cfg, logger, authSvc)
+		mw = middleware.NewMockAuthMiddleware(cfg, logger, authSvc)
 
 		// Set up test recorder
 		recorder = httptest.NewRecorder()
@@ -66,7 +65,7 @@ var _ = Describe("AuthMiddleware", func() {
 				}
 
 				// Set up a test endpoint that requires authentication
-				router.GET("/protected", mw.RequireAuth(), func(c *gin.Context) {
+				router.GET("/protected", mw.RequireAuthForTest(), func(c *gin.Context) {
 					userID, exists := c.Get("user_id")
 					if !exists {
 						c.String(http.StatusInternalServerError, "No user ID in context")
@@ -91,7 +90,7 @@ var _ = Describe("AuthMiddleware", func() {
 		Context("when no token is provided", func() {
 			It("returns 401 Unauthorized", func() {
 				// Set up a test endpoint that requires authentication
-				router.GET("/protected", mw.RequireAuth(), func(c *gin.Context) {
+				router.GET("/protected", mw.RequireAuthForTest(), func(c *gin.Context) {
 					c.String(http.StatusOK, "This should not be reached")
 				})
 
@@ -114,7 +113,7 @@ var _ = Describe("AuthMiddleware", func() {
 				}
 
 				// Set up a test endpoint that requires authentication
-				router.GET("/protected", mw.RequireAuth(), func(c *gin.Context) {
+				router.GET("/protected", mw.RequireAuthForTest(), func(c *gin.Context) {
 					c.String(http.StatusOK, "This should not be reached")
 				})
 
@@ -133,7 +132,7 @@ var _ = Describe("AuthMiddleware", func() {
 		Context("when the token has an invalid format", func() {
 			It("returns 401 Unauthorized for non-Bearer tokens", func() {
 				// Set up a test endpoint that requires authentication
-				router.GET("/protected", mw.RequireAuth(), func(c *gin.Context) {
+				router.GET("/protected", mw.RequireAuthForTest(), func(c *gin.Context) {
 					c.String(http.StatusOK, "This should not be reached")
 				})
 
@@ -159,7 +158,7 @@ var _ = Describe("AuthMiddleware", func() {
 				}
 
 				// Set up a test endpoint that requires admin access
-				router.GET("/admin", mw.RequireAuth(), mw.AdminOnly(), func(c *gin.Context) {
+				router.GET("/admin", mw.RequireAuthForTest(), mw.AdminOnlyForTest(), func(c *gin.Context) {
 					c.String(http.StatusOK, "Admin access granted")
 				})
 
@@ -189,7 +188,7 @@ var _ = Describe("AuthMiddleware", func() {
 				}
 
 				// Set up a test endpoint that requires admin access
-				router.GET("/admin", mw.RequireAuth(), mw.AdminOnly(), func(c *gin.Context) {
+				router.GET("/admin", mw.RequireAuthForTest(), mw.AdminOnlyForTest(), func(c *gin.Context) {
 					c.String(http.StatusOK, "This should not be reached")
 				})
 
@@ -213,7 +212,7 @@ var _ = Describe("AuthMiddleware", func() {
 		Context("when no user is authenticated", func() {
 			It("redirects to authentication first", func() {
 				// Set up a test endpoint that requires admin access
-				router.GET("/admin", mw.RequireAuth(), mw.AdminOnly(), func(c *gin.Context) {
+				router.GET("/admin", mw.RequireAuthForTest(), mw.AdminOnlyForTest(), func(c *gin.Context) {
 					c.String(http.StatusOK, "This should not be reached")
 				})
 

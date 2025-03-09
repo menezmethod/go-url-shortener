@@ -2,13 +2,15 @@ package mocks
 
 import (
 	"database/sql"
+
+	"github.com/menezmethod/ref_go/internal/common"
 )
 
 // DBMock provides a mock implementation of database operations for testing
 type DBMock struct {
 	ExecFunc               func(query string, args ...interface{}) (sql.Result, error)
 	QueryFunc              func(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRowFunc           func(query string, args ...interface{}) *sql.Row
+	QueryRowFunc           func(query string, args ...interface{}) common.Scanner
 	BeginFunc              func() (*sql.Tx, error)
 	PrepareFunc            func(query string) (*sql.Stmt, error)
 	PingFunc               func() error
@@ -35,7 +37,7 @@ func (m *DBMock) Query(query string, args ...interface{}) (*sql.Rows, error) {
 }
 
 // QueryRow mocks the database QueryRow function
-func (m *DBMock) QueryRow(query string, args ...interface{}) *sql.Row {
+func (m *DBMock) QueryRow(query string, args ...interface{}) common.Scanner {
 	if m.QueryRowFunc != nil {
 		return m.QueryRowFunc(query, args...)
 	}

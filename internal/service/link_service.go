@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"net/url"
 
 	"github.com/menezmethod/ref_go/internal/domain"
@@ -13,9 +15,14 @@ func (s *LinkService) CreateLink(req CreateLinkRequest) (*domain.Link, error) {
 		return nil, domain.ErrValidation
 	}
 
-	// If custom alias is provided, check if it's available
-	if req.CustomAlias != "" {
-		existing, err := s.linkRepo.GetByShortURL(req.CustomAlias)
+	// Generate a short URL if not provided
+	shortURL := req.CustomAlias
+	if shortURL == "" {
+		// Generate a random short code
+		shortURL = generateShortCode(6)
+	} else {
+		// If custom alias is provided, check if it's available
+		existing, err := s.linkRepo.GetByShortURL(shortURL)
 		if err == nil && existing != nil {
 			return nil, domain.ErrConflict
 		}
@@ -25,7 +32,7 @@ func (s *LinkService) CreateLink(req CreateLinkRequest) (*domain.Link, error) {
 	link := &domain.Link{
 		UserID:      req.UserID,
 		OriginalURL: req.OriginalURL,
-		ShortURL:    req.CustomAlias,
+		ShortURL:    shortURL,
 	}
 
 	// Save to repository
@@ -35,6 +42,13 @@ func (s *LinkService) CreateLink(req CreateLinkRequest) (*domain.Link, error) {
 	}
 
 	return link, nil
+}
+
+// Generate a random short code of specified length
+func generateShortCode(length int) string {
+	b := make([]byte, length)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)[:length]
 }
 
 // GetLink retrieves a link by ID
