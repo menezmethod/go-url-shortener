@@ -1,5 +1,5 @@
 # Build stage
-FROM --platform=linux/amd64 golang:1.19-alpine AS builder
+FROM golang:1.19-alpine AS builder
 
 # Install necessary build tools
 RUN apk add --no-cache ca-certificates git
@@ -17,18 +17,16 @@ RUN go mod download
 COPY . .
 
 # Build the application with production optimizations
-# Explicitly set GOARCH to amd64 to ensure compatibility
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o urlshortener ./cmd/server
 
 # Install migrate tool for migrations
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # Final stage
-FROM --platform=linux/amd64 alpine:latest
+FROM alpine:3.16
 
 # Install certificates and timezone data
-RUN apk --no-cache add ca-certificates tzdata curl && \
-    update-ca-certificates
+RUN apk add --no-cache ca-certificates tzdata curl
 
 # Create a non-root user to run the application
 RUN adduser -D -g '' appuser
@@ -69,4 +67,4 @@ ENV PORT=8081 \
     SHORTLINK_DEFAULT_EXPIRY=30d
 
 # Run the application
-ENTRYPOINT ["/app/urlshortener"] 
+ENTRYPOINT ["/app/urlshortener"]
