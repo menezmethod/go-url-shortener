@@ -1,0 +1,167 @@
+basePath: /api
+definitions:
+  domain.CreateShortLinkRequest:
+    properties:
+      custom_alias:
+        type: string
+      expiration_date:
+        type: string
+      url:
+        type: string
+    type: object
+  domain.ShortLink:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      custom_alias:
+        type: string
+      expiration_date:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      updated_at:
+        type: string
+      url:
+        allOf:
+        - $ref: '#/definitions/domain.URL'
+        description: Embedded URL information when fetching a short link
+      url_id:
+        type: string
+    type: object
+  domain.URL:
+    properties:
+      created_at:
+        type: string
+      hash:
+        type: string
+      id:
+        type: string
+      original_url:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  handlers.TokenRequest:
+    properties:
+      master_password:
+        example: your_master_password
+        type: string
+    required:
+    - master_password
+    type: object
+  handlers.TokenResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+host: localhost:8081
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: http://www.example.com/support
+  description: A RESTful API for shortening URLs with analytics.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://example.com/terms/
+  title: URL Shortener API
+  version: "1.0"
+paths:
+  /auth/token:
+    post:
+      consumes:
+      - application/json
+      description: Generate a JWT token using the master password
+      parameters:
+      - description: Token request with master password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.TokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token generated successfully
+          schema:
+            $ref: '#/definitions/handlers.TokenResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized - Invalid master password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Generate authentication token
+      tags:
+      - auth
+  /links:
+    post:
+      consumes:
+      - application/json
+      description: Create a new short link for a URL, optionally with a custom alias
+      parameters:
+      - description: Link creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateShortLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Link created successfully
+          schema:
+            $ref: '#/definitions/domain.ShortLink'
+        "400":
+          description: Invalid request or URL
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new short link
+      tags:
+      - links
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Enter 'Bearer ' followed by your JWT token
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
