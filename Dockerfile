@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23.4-alpine AS builder
+FROM --platform=linux/amd64 golang:1.19-alpine AS builder
 
 # Install necessary build tools
 RUN apk add --no-cache ca-certificates git
@@ -17,13 +17,14 @@ RUN go mod download
 COPY . .
 
 # Build the application with production optimizations
+# Explicitly set GOARCH to amd64 to ensure compatibility
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o urlshortener ./cmd/server
 
 # Install migrate tool for migrations
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # Final stage
-FROM alpine:latest
+FROM --platform=linux/amd64 alpine:latest
 
 # Install certificates and timezone data
 RUN apk --no-cache add ca-certificates tzdata curl && \
