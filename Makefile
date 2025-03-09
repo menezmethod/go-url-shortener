@@ -1,4 +1,4 @@
-.PHONY: run build test lint clean deps docker-build docker-run migrate-up migrate-down migrate-create setup install-tools
+.PHONY: run build test lint clean deps docker-build docker-run migrate-up migrate-down migrate-create setup install-tools test-ginkgo test-coverage test-focus
 
 # Build variables
 BINARY_NAME=urlshortener
@@ -44,6 +44,23 @@ run:
 test:
 	@echo "Testing..."
 	@$(GOTEST) -v ./...
+
+# Run tests with Ginkgo
+test-ginkgo:
+	@echo "Running tests with Ginkgo..."
+	@ginkgo -r -v ./...
+
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	@ginkgo -r -v --cover --coverprofile=coverage.out ./...
+	@go tool cover -html=coverage.out -o coverage.html
+	@go tool cover -func=coverage.out
+
+# Run focused tests
+test-focus:
+	@echo "Running focused tests..."
+	@ginkgo -r -v --focus="$(FOCUS)" ./...
 
 # Lint the code
 lint:
@@ -109,4 +126,5 @@ migrate-create:
 install-tools:
 	@echo "Installing required development tools..."
 	@go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest 
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/onsi/ginkgo/v2/ginkgo@latest 
