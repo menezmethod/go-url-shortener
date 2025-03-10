@@ -4,12 +4,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-
-	"github.com/menezmethod/ref_go/internal/metrics"
 )
 
+// MetricsCollector defines the interface for collecting metrics
+type MetricsCollector interface {
+	RecordRequest(path string)
+	RecordResponse(path string, statusCode int, duration time.Duration)
+}
+
 // Metrics middleware records metrics for each request
-func Metrics(metrics *metrics.Metrics) gin.HandlerFunc {
+func Metrics(metrics MetricsCollector) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Record start time
 		start := time.Now()

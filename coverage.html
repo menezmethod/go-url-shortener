@@ -1,0 +1,656 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>middleware: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/menezmethod/ref_go/internal/api/middleware/auth.go (73.9%)</option>
+				
+				<option value="file1">github.com/menezmethod/ref_go/internal/api/middleware/metrics.go (100.0%)</option>
+				
+				<option value="file2">github.com/menezmethod/ref_go/internal/api/middleware/middleware.go (100.0%)</option>
+				
+				<option value="file3">github.com/menezmethod/ref_go/internal/api/middleware/mock_auth_middleware.go (90.6%)</option>
+				
+				<option value="file4">github.com/menezmethod/ref_go/internal/api/middleware/rate_limiter.go (89.4%)</option>
+				
+				<option value="file5">github.com/menezmethod/ref_go/internal/api/middleware/security.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package middleware
+
+import (
+        "strings"
+
+        "github.com/gin-gonic/gin"
+        "go.uber.org/zap"
+
+        "github.com/menezmethod/ref_go/internal/auth"
+)
+
+// AuthService interface abstracts the token validation functionality
+type AuthService interface {
+        ValidateToken(token string) (*auth.TokenClaims, error)
+}
+
+// Authentication middleware checks for valid JWT token
+func Authentication(authService AuthService) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                // Get logger from context
+                logger := GetLogger(c)
+
+                // Extract token from Authorization header
+                authHeader := c.GetHeader("Authorization")
+                if authHeader == "" </span><span class="cov0" title="0">{
+                        logger.Info("Missing Authorization header")
+                        c.AbortWithStatusJSON(401, gin.H{"error": "Unauthorized"})
+                        return
+                }</span>
+
+                // Check token format
+                <span class="cov8" title="1">parts := strings.Split(authHeader, " ")
+                if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" </span><span class="cov0" title="0">{
+                        logger.Info("Invalid Authorization header format")
+                        c.AbortWithStatusJSON(401, gin.H{"error": "Unauthorized"})
+                        return
+                }</span>
+
+                <span class="cov8" title="1">tokenString := parts[1]
+
+                // Validate token
+                claims, err := authService.ValidateToken(tokenString)
+                if err != nil </span><span class="cov8" title="1">{
+                        logger.Info("Invalid token", zap.Error(err))
+                        c.AbortWithStatusJSON(401, gin.H{"error": "Unauthorized"})
+                        return
+                }</span>
+
+                // Store claims in context
+                <span class="cov8" title="1">c.Set("claims", claims)
+
+                // Continue to the next handler
+                c.Next()</span>
+        }
+}
+
+// GetTokenClaims retrieves token claims from context
+func GetTokenClaims(c *gin.Context) *auth.TokenClaims <span class="cov8" title="1">{
+        if claims, exists := c.Get("claims"); exists </span><span class="cov8" title="1">{
+                return claims.(*auth.TokenClaims)
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package middleware
+
+import (
+        "time"
+
+        "github.com/gin-gonic/gin"
+)
+
+// MetricsCollector defines the interface for collecting metrics
+type MetricsCollector interface {
+        RecordRequest(path string)
+        RecordResponse(path string, statusCode int, duration time.Duration)
+}
+
+// Metrics middleware records metrics for each request
+func Metrics(metrics MetricsCollector) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                // Record start time
+                start := time.Now()
+
+                // Record request
+                path := c.Request.URL.Path
+                metrics.RecordRequest(path)
+
+                // Process request
+                c.Next()
+
+                // Record response
+                duration := time.Since(start)
+                metrics.RecordResponse(path, c.Writer.Status(), duration)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package middleware
+
+import (
+        "bytes"
+        "context"
+        "io"
+        "net/http"
+        "time"
+
+        "github.com/gin-gonic/gin"
+        "github.com/google/uuid"
+        "go.uber.org/zap"
+
+        "github.com/menezmethod/ref_go/internal/logger"
+)
+
+type contextKey string
+
+const (
+        requestIDKey contextKey = "requestID"
+        loggerKey    contextKey = "logger"
+)
+
+// RequestID adds a unique request ID to each request
+func RequestID() gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                // Check if request ID is provided in header
+                id := c.GetHeader("X-Request-ID")
+                if id == "" </span><span class="cov8" title="1">{
+                        id = uuid.New().String()
+                }</span>
+
+                <span class="cov8" title="1">c.Set(string(requestIDKey), id)
+                c.Header("X-Request-ID", id)
+                c.Next()</span>
+        }
+}
+
+// GetRequestID retrieves the request ID from context
+func GetRequestID(c *gin.Context) string <span class="cov8" title="1">{
+        if id, exists := c.Get(string(requestIDKey)); exists </span><span class="cov8" title="1">{
+                return id.(string)
+        }</span>
+        <span class="cov8" title="1">return ""</span>
+}
+
+// Logging logs requests with zap
+func Logging(baseLogger *zap.Logger) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                start := time.Now()
+                requestID := GetRequestID(c)
+
+                // Create a request-scoped logger
+                requestLogger := logger.RequestLogger(baseLogger, requestID)
+
+                // Add logger to context
+                c.Set(string(loggerKey), requestLogger)
+
+                // Get request body for POST/PUT/PATCH requests
+                var body []byte
+                if c.Request.Method != "GET" &amp;&amp; c.Request.Body != nil </span><span class="cov8" title="1">{
+                        body, _ = c.GetRawData()
+                        // Restore the request body for later use
+                        c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+                }</span>
+
+                // Log request details
+                <span class="cov8" title="1">fields := []zap.Field{
+                        zap.String("method", c.Request.Method),
+                        zap.String("path", c.Request.URL.Path),
+                        zap.String("remote_addr", c.ClientIP()),
+                        zap.String("user_agent", c.Request.UserAgent()),
+                }
+                if len(body) &gt; 0 </span><span class="cov8" title="1">{
+                        fields = append(fields, zap.String("body", string(body)))
+                }</span>
+                <span class="cov8" title="1">requestLogger.Info("Request started", fields...)
+
+                // Process request
+                c.Next()
+
+                // Log response time and status
+                requestLogger.Info("Request completed",
+                        zap.Int("status", c.Writer.Status()),
+                        zap.Duration("duration", time.Since(start)),
+                )</span>
+        }
+}
+
+// GetLogger retrieves the request-scoped logger from context
+func GetLogger(c *gin.Context) *zap.Logger <span class="cov8" title="1">{
+        if logger, exists := c.Get(string(loggerKey)); exists </span><span class="cov8" title="1">{
+                return logger.(*zap.Logger)
+        }</span>
+        // Fallback to global logger
+        <span class="cov8" title="1">return zap.L()</span>
+}
+
+// Recovery middleware handles panics
+func Recovery() gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                defer func() </span><span class="cov8" title="1">{
+                        if err := recover(); err != nil </span><span class="cov8" title="1">{
+                                logger := GetLogger(c)
+                                logger.Error("Recovered from panic",
+                                        zap.Any("error", err),
+                                        zap.String("path", c.Request.URL.Path),
+                                )
+
+                                c.AbortWithStatusJSON(500, gin.H{"error": "Internal server error"})
+                        }</span>
+                }()
+
+                <span class="cov8" title="1">c.Next()</span>
+        }
+}
+
+// Timeout middleware adds request timeout
+func Timeout(timeout time.Duration) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
+                defer cancel()
+
+                c.Request = c.Request.WithContext(ctx)
+
+                // Monitor context cancellation in a separate goroutine
+                done := make(chan struct{})
+                go func() </span><span class="cov8" title="1">{
+                        select </span>{
+                        case &lt;-ctx.Done():<span class="cov8" title="1">
+                                if ctx.Err() == context.DeadlineExceeded </span><span class="cov8" title="1">{
+                                        c.AbortWithStatusJSON(http.StatusGatewayTimeout, gin.H{"error": "Request timeout"})
+                                }</span>
+                        case &lt;-done:<span class="cov8" title="1"></span>
+                                // Request completed before timeout
+                        }
+                }()
+
+                <span class="cov8" title="1">c.Next()
+                close(done)</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package middleware
+
+import (
+        "net/http"
+        "strings"
+
+        "github.com/gin-gonic/gin"
+        "github.com/menezmethod/ref_go/internal/config"
+        "go.uber.org/zap"
+)
+
+// MockAuthService defines the interface for auth service testing
+type MockAuthService interface {
+        ValidateToken(token string) (string, error)
+        IsAdmin(userID string) bool
+}
+
+// MockAuthMiddleware handles authentication and authorization for testing
+type MockAuthMiddleware struct {
+        cfg     *config.Config
+        logger  *zap.Logger
+        authSvc MockAuthService
+}
+
+// NewMockAuthMiddleware creates a new MockAuthMiddleware for testing
+func NewMockAuthMiddleware(cfg *config.Config, logger *zap.Logger, authSvc MockAuthService) *MockAuthMiddleware <span class="cov8" title="1">{
+        return &amp;MockAuthMiddleware{
+                cfg:     cfg,
+                logger:  logger,
+                authSvc: authSvc,
+        }
+}</span>
+
+// RequireAuthForTest ensures that a valid JWT token is provided (for testing)
+func (m *MockAuthMiddleware) RequireAuthForTest() gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                authHeader := c.GetHeader("Authorization")
+
+                // Check if Authorization header exists
+                if authHeader == "" </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+                        c.Abort()
+                        return
+                }</span>
+
+                // Check for Bearer token format
+                <span class="cov8" title="1">parts := strings.Split(authHeader, " ")
+                if len(parts) != 2 || parts[0] != "Bearer" </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
+                        c.Abort()
+                        return
+                }</span>
+
+                // Validate token
+                <span class="cov8" title="1">token := parts[1]
+                userID, err := m.authSvc.ValidateToken(token)
+                if err != nil </span><span class="cov8" title="1">{
+                        m.logger.Error("Failed to validate token", zap.Error(err))
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+                        c.Abort()
+                        return
+                }</span>
+
+                // Set user ID in context
+                <span class="cov8" title="1">c.Set("user_id", userID)
+                c.Next()</span>
+        }
+}
+
+// AdminOnlyForTest ensures that the user is an admin (for testing)
+func (m *MockAuthMiddleware) AdminOnlyForTest() gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                userID, exists := c.Get("user_id")
+                if !exists </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if !m.authSvc.IsAdmin(userID.(string)) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+                        c.Abort()
+                        return
+                }</span>
+
+                <span class="cov8" title="1">c.Next()</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package middleware
+
+import (
+        "strconv"
+        "sync"
+        "time"
+
+        "github.com/gin-gonic/gin"
+        "go.uber.org/zap"
+
+        "github.com/menezmethod/ref_go/internal/config"
+)
+
+// RateLimiter implements a token bucket rate limiter
+type RateLimiter struct {
+        mu            sync.Mutex
+        buckets       map[string]*tokenBucket
+        capacity      int           // Maximum tokens per bucket
+        refillRate    time.Duration // Rate at which tokens are refilled
+        cleanupPeriod time.Duration // How often to clean up old buckets
+        logger        *zap.Logger
+}
+
+// tokenBucket represents a token bucket for an individual client
+type tokenBucket struct {
+        tokens    int       // Current number of tokens
+        lastSeen  time.Time // Last time this bucket was accessed
+        lastRefil time.Time // Last time tokens were refilled
+}
+
+// NewRateLimiter creates a new rate limiter
+func NewRateLimiter(cfg *config.Config, logger *zap.Logger) *RateLimiter <span class="cov8" title="1">{
+        return NewRateLimiterWithCleanup(cfg, logger, 10*time.Minute)
+}</span>
+
+// NewRateLimiterWithCleanup creates a new rate limiter with a custom cleanup period
+func NewRateLimiterWithCleanup(cfg *config.Config, logger *zap.Logger, cleanupPeriod time.Duration) *RateLimiter <span class="cov8" title="1">{
+        limiter := &amp;RateLimiter{
+                buckets:       make(map[string]*tokenBucket),
+                capacity:      cfg.RateLimit.Requests,
+                refillRate:    cfg.RateLimit.Window,
+                cleanupPeriod: cleanupPeriod,
+                logger:        logger,
+        }
+
+        // Start a goroutine to periodically clean up old buckets
+        go limiter.cleanupTask()
+
+        return limiter
+}</span>
+
+// cleanupTask removes buckets that haven't been seen in a while
+func (rl *RateLimiter) cleanupTask() <span class="cov8" title="1">{
+        ticker := time.NewTicker(rl.cleanupPeriod)
+        defer ticker.Stop()
+
+        for range ticker.C </span><span class="cov8" title="1">{
+                rl.cleanup()
+        }</span>
+}
+
+// cleanup removes old buckets
+func (rl *RateLimiter) cleanup() <span class="cov8" title="1">{
+        rl.mu.Lock()
+        defer rl.mu.Unlock()
+
+        threshold := time.Now().Add(-rl.cleanupPeriod)
+        for key, bucket := range rl.buckets </span><span class="cov8" title="1">{
+                if bucket.lastSeen.Before(threshold) </span><span class="cov8" title="1">{
+                        delete(rl.buckets, key)
+                }</span>
+        }
+}
+
+// Allow checks if a request is allowed based on the client's identifier
+func (rl *RateLimiter) Allow(identifier string) (bool, int, time.Time) <span class="cov8" title="1">{
+        rl.mu.Lock()
+        defer rl.mu.Unlock()
+
+        now := time.Now()
+
+        // Get or create a bucket for this client
+        bucket, exists := rl.buckets[identifier]
+        if !exists </span><span class="cov8" title="1">{
+                bucket = &amp;tokenBucket{
+                        tokens:    rl.capacity,
+                        lastSeen:  now,
+                        lastRefil: now,
+                }
+                rl.buckets[identifier] = bucket
+        }</span>
+
+        // Update last seen time
+        <span class="cov8" title="1">bucket.lastSeen = now
+
+        // Calculate tokens to add based on time elapsed since last refill
+        elapsed := now.Sub(bucket.lastRefil)
+        tokensToAdd := int(elapsed.Seconds() / rl.refillRate.Seconds() * float64(rl.capacity))
+
+        if tokensToAdd &gt; 0 </span><span class="cov0" title="0">{
+                bucket.tokens = min(bucket.tokens+tokensToAdd, rl.capacity)
+                bucket.lastRefil = now
+        }</span>
+
+        // If the bucket has tokens, allow the request
+        <span class="cov8" title="1">if bucket.tokens &gt; 0 </span><span class="cov8" title="1">{
+                bucket.tokens--
+                return true, bucket.tokens, time.Time{}
+        }</span>
+
+        // Calculate when the next token will be available
+        <span class="cov8" title="1">nextRefill := bucket.lastRefil.Add(rl.refillRate)
+        return false, 0, nextRefill</span>
+}
+
+// RateLimit middleware limits the rate of requests
+func RateLimit(limiter *RateLimiter) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                // Get client identifier (IP address)
+                clientIP := c.ClientIP()
+                logger := GetLogger(c)
+
+                // Check if the request is allowed
+                allowed, remaining, retryAfter := limiter.Allow(clientIP)
+
+                // Set rate limit headers
+                c.Header("X-RateLimit-Limit", strconv.Itoa(limiter.capacity))
+                c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
+
+                if !allowed </span><span class="cov8" title="1">{
+                        // Set retry-after header
+                        c.Header("Retry-After", strconv.Itoa(int(time.Until(retryAfter).Seconds())))
+
+                        // Return 429 Too Many Requests
+                        logger.Info("Rate limit exceeded",
+                                zap.String("client_ip", clientIP),
+                                zap.Time("retry_after", retryAfter),
+                        )
+                        c.AbortWithStatusJSON(429, gin.H{"error": "Rate limit exceeded"})
+                        return
+                }</span>
+
+                // Process the request
+                <span class="cov8" title="1">c.Next()</span>
+        }
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int <span class="cov0" title="0">{
+        if a &lt; b </span><span class="cov0" title="0">{
+                return a
+        }</span>
+        <span class="cov0" title="0">return b</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package middleware
+
+import (
+        "github.com/gin-gonic/gin"
+)
+
+// SecurityHeaders adds security headers to responses
+func SecurityHeaders() gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                // Set security headers
+                c.Header("X-Content-Type-Options", "nosniff")
+                c.Header("X-Frame-Options", "DENY")
+                c.Header("X-XSS-Protection", "1; mode=block")
+                c.Header("Content-Security-Policy", "default-src 'self'")
+                c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+                c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
+                // Call the next handler
+                c.Next()
+        }</span>
+}
+
+// CORS adds Cross-Origin Resource Sharing headers
+func CORS(allowedOrigins []string) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                origin := c.GetHeader("Origin")
+
+                // Check if origin is allowed
+                allowed := false
+                for _, allowedOrigin := range allowedOrigins </span><span class="cov8" title="1">{
+                        if allowedOrigin == "*" || allowedOrigin == origin </span><span class="cov8" title="1">{
+                                allowed = true
+                                break</span>
+                        }
+                }
+
+                <span class="cov8" title="1">if allowed </span><span class="cov8" title="1">{
+                        // Set CORS headers
+                        c.Header("Access-Control-Allow-Origin", origin)
+                        c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                        c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                        c.Header("Access-Control-Max-Age", "86400") // 24 hours
+
+                        // Handle preflight requests
+                        if c.Request.Method == "OPTIONS" </span><span class="cov8" title="1">{
+                                c.AbortWithStatus(204)
+                                return
+                        }</span>
+                }
+
+                // Call the next handler
+                <span class="cov8" title="1">c.Next()</span>
+        }
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

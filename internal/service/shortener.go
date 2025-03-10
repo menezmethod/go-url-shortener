@@ -161,7 +161,19 @@ func (s *URLShortenerService) CreateShortLink(ctx context.Context, req *domain.C
 
 // GetShortLink retrieves a short link by ID
 func (s *URLShortenerService) GetShortLink(ctx context.Context, id string) (*domain.ShortLink, error) {
-	return s.linkRepo.GetByID(ctx, id)
+	link, err := s.linkRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("retrieving short link: %w", err)
+	}
+
+	// Fetch URL data
+	url, err := s.urlRepo.GetByID(ctx, link.URLID)
+	if err != nil {
+		return nil, fmt.Errorf("retrieving URL data: %w", err)
+	}
+
+	link.URL = url
+	return link, nil
 }
 
 // GetShortLinkByCode retrieves a short link by code
@@ -172,12 +184,22 @@ func (s *URLShortenerService) GetShortLinkByCode(ctx context.Context, code strin
 		return nil, fmt.Errorf("checking custom alias: %w", err)
 	}
 
-	if link != nil {
-		return link, nil
+	if link == nil {
+		// Try by code
+		link, err = s.linkRepo.GetByCode(ctx, code)
+		if err != nil {
+			return nil, fmt.Errorf("retrieving short link: %w", err)
+		}
 	}
 
-	// Then try by code
-	return s.linkRepo.GetByCode(ctx, code)
+	// Fetch URL data
+	url, err := s.urlRepo.GetByID(ctx, link.URLID)
+	if err != nil {
+		return nil, fmt.Errorf("retrieving URL data: %w", err)
+	}
+
+	link.URL = url
+	return link, nil
 }
 
 // UpdateShortLink updates a short link
@@ -377,44 +399,42 @@ func parseUserAgent(userAgent string) (browser, os, device string) {
 
 	// Extract browser
 	switch {
+	case strings.Contains(userAgent, "edg/"):
+		browser = "Edge"
+	case strings.Contains(userAgent, "opr/") || strings.Contains(userAgent, "opera"):
+		browser = "Opera"
 	case strings.Contains(userAgent, "chrome") && !strings.Contains(userAgent, "chromium"):
 		browser = "Chrome"
 	case strings.Contains(userAgent, "firefox"):
 		browser = "Firefox"
 	case strings.Contains(userAgent, "safari") && !strings.Contains(userAgent, "chrome"):
 		browser = "Safari"
-	case strings.Contains(userAgent, "edge"):
-		browser = "Edge"
-	case strings.Contains(userAgent, "opera"):
-		browser = "Opera"
 	default:
 		browser = "Other"
 	}
 
 	// Extract OS
 	switch {
+	case strings.Contains(userAgent, "android"):
+		os = "Android"
+	case strings.Contains(userAgent, "iphone") || strings.Contains(userAgent, "ipad") || strings.Contains(userAgent, "ipod"):
+		os = "iOS"
 	case strings.Contains(userAgent, "windows"):
 		os = "Windows"
 	case strings.Contains(userAgent, "mac os") || strings.Contains(userAgent, "macos"):
 		os = "macOS"
-	case strings.Contains(userAgent, "linux"):
+	case strings.Contains(userAgent, "linux") && !strings.Contains(userAgent, "android"):
 		os = "Linux"
-	case strings.Contains(userAgent, "android"):
-		os = "Android"
-	case strings.Contains(userAgent, "iphone") || strings.Contains(userAgent, "ipad"):
-		os = "iOS"
 	default:
 		os = "Other"
 	}
 
 	// Extract device type
 	switch {
-	case strings.Contains(userAgent, "mobile"):
+	case strings.Contains(userAgent, "ipad") || strings.Contains(userAgent, "tablet"):
+		device = "Tablet"
+	case strings.Contains(userAgent, "mobile") || strings.Contains(userAgent, "iphone") || strings.Contains(userAgent, "ipod"):
 		device = "Mobile"
-	case strings.Contains(userAgent, "tablet"):
-		device = "Tablet"
-	case strings.Contains(userAgent, "ipad"):
-		device = "Tablet"
 	default:
 		device = "Desktop"
 	}

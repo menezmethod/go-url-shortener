@@ -297,12 +297,12 @@ jobs:
 | config      | ✅ Complete | 83.8%      | Config loading tests with environment variables |
 | logger      | ✅ Complete | 93.3%      | Logger initialization tests                   |
 | models      | ⏳ Pending  | -          | -                                             |
-| domain      | ✅ Complete | -          | Common domain errors and models               |
+| domain      | ✅ Complete | 100.0%     | Common domain errors and models               |
 | db          | ⏳ Pending  | 0.0%       | -                                             |
 | redis       | ⏳ Pending  | -          | -                                             |
-| cache       | ✅ Complete | 100.0%     | In-memory cache implementation               |
+| cache       | ✅ Complete | 100.0%     | In-memory cache implementation with concurrency tests |
 | repository  | ✅ Complete | 67.2%      | Link repository with DB mocks                 |
-| service     | ✅ Complete | 20.6%      | Link service with repository mocks           |
+| service     | ✅ Complete | 74.6%      | Link service, URL shortener, and cached service with mocks |
 | auth        | ⏳ Pending  | 0.0%       | -                                             |
 | metrics     | ⏳ Pending  | 0.0%       | -                                             |
 | middleware  | ✅ Complete | 17.2%      | Auth middleware with mocks                    |
@@ -318,18 +318,19 @@ Legend:
 
 ## Current Status Summary
 
-Overall, our test coverage is at **18.3%** across the entire codebase. Here's a breakdown of our current testing status:
+Overall, our test coverage is at **35.2%** across the entire codebase. Here's a breakdown of our current testing status:
 
 ### Well-Tested Components
-- **Cache**: 100% coverage - Complete implementation with all edge cases covered
+- **Cache**: 100% coverage - Complete implementation with concurrency tests
+- **Domain**: 100% coverage - All domain models and errors tested
 - **Logger**: 93.3% coverage - Core functionality tested, only RequestLogger remains untested
 - **Config**: 83.8% coverage - Configuration loading and validation extensively tested
+- **Service**: 74.6% coverage - Comprehensive tests for all service implementations
 - **Repository**: 67.2% coverage - Core database operations tested, with some complex row scanning operations skipped
 
 ### Partially Tested Components
 - **Middleware**: 17.2% coverage - Authentication middleware tested, other middleware needs tests
 - **Handlers**: 14.6% coverage - Core handler functionality tested, but many endpoints untested
-- **Service**: 20.6% coverage - Basic service operations fully tested, shortened service and cached service untested
 
 ### Untested Components
 - **Database**: 0% coverage - Connection handling and migrations untested
@@ -344,11 +345,16 @@ Overall, our test coverage is at **18.3%** across the entire codebase. Here's a 
 - Created a common interfaces package to improve testability
 - Established a pattern for BDD-style tests with Ginkgo and Gomega
 - Fixed type compatibility issues between production and test code
+- Achieved 100% coverage for cache implementation with concurrency tests
+- Consolidated service tests into a single file for better organization
+- Added comprehensive tests for URL shortener and cached services
 
 ### Challenges
 - Ensuring consistency between mock implementations and real components
 - Achieving high coverage for complex database operations
 - Testing error scenarios that are difficult to reproduce
+- Managing test suite organization with multiple services
+- Handling asynchronous operations in tests
 
 ## Next Steps
 
@@ -356,7 +362,6 @@ Overall, our test coverage is at **18.3%** across the entire codebase. Here's a 
    - internal/api/handlers (currently 14.6%)
    - internal/api/middleware (currently 17.2%)
    - internal/repository (currently 67.2%, focus on List and GetClicks methods)
-   - internal/service (currently 20.6%, focus on URLShortenerService and CachedURLShortenerService)
 
 2. **Complete tests for remaining components**:
    - internal/models
@@ -369,6 +374,7 @@ Overall, our test coverage is at **18.3%** across the entire codebase. Here's a 
 3. **Create integration tests**:
    - End-to-end API flow tests
    - Database integration tests
+   - Redis integration tests
 
 4. **Set up CI/CD integration**:
    - GitHub Actions workflow
@@ -379,6 +385,7 @@ Overall, our test coverage is at **18.3%** across the entire codebase. Here's a 
    - Update mock implementations as needed
    - Handle database connections in tests
    - Mock external dependencies
+   - Improve async operation testing
 
 6. **Run coverage reports**:
    - Generate coverage reports with `ginkgo -r -v --cover`
