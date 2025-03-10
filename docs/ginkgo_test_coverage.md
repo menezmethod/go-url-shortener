@@ -302,7 +302,7 @@ jobs:
 | redis       | ⏳ Pending  | -          | -                                             |
 | cache       | ✅ Complete | 100.0%     | In-memory cache implementation               |
 | repository  | ✅ Complete | 23.0%      | Link repository with DB mocks                 |
-| service     | ✅ Complete | 7.1%       | Link service with repository mocks           |
+| service     | ✅ Complete | 20.6%      | Link service with repository mocks           |
 | auth        | ⏳ Pending  | 0.0%       | -                                             |
 | metrics     | ⏳ Pending  | 0.0%       | -                                             |
 | middleware  | ✅ Complete | 17.2%      | Auth middleware with mocks                    |
@@ -318,7 +318,7 @@ Legend:
 
 ## Current Status Summary
 
-Overall, our test coverage is at **12.2%** across the entire codebase. Here's a breakdown of our current testing status:
+Overall, our test coverage is at **16.1%** across the entire codebase. Here's a breakdown of our current testing status:
 
 ### Well-Tested Components
 - **Cache**: 100% coverage - Complete implementation with all edge cases covered
@@ -329,7 +329,7 @@ Overall, our test coverage is at **12.2%** across the entire codebase. Here's a 
 - **Repository**: 23.0% coverage - Basic operations tested, but many methods remain untested
 - **Middleware**: 17.2% coverage - Authentication middleware tested, other middleware needs tests
 - **Handlers**: 14.6% coverage - Core handler functionality tested, but many endpoints untested
-- **Service**: 7.1% coverage - Basic service operations tested, many methods untested
+- **Service**: 20.6% coverage - Basic service operations fully tested, shortened service and cached service untested
 
 ### Untested Components
 - **Database**: 0% coverage - Connection handling and migrations untested
@@ -356,7 +356,7 @@ Overall, our test coverage is at **12.2%** across the entire codebase. Here's a 
    - internal/api/handlers (currently 14.6%)
    - internal/api/middleware (currently 17.2%)
    - internal/repository (currently 23.0%)
-   - internal/service (currently 7.1%)
+   - internal/service (currently 20.6%)
 
 2. **Complete tests for remaining components**:
    - internal/models
