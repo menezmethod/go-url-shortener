@@ -34,3 +34,13 @@ build/
 
 # Log files
 *.log
+
+# Specstory files
+.specstory/
+/.specstory/*
+
+# Coverage files
+coverage.html
+coverage.out
+coverage.txt
+

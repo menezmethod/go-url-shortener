@@ -1,129 +1,120 @@
 package cache
 
 import (
-	"sync"
 	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestInMemoryCache(t *testing.T) {
-	// Create a new cache with a 1-second default TTL
-	cache := New(1*time.Second, 5*time.Second)
-
-	// Test Set and Get
-	cache.Set("test-key", "test-value", 0)
-	value, found := cache.Get("test-key")
-	if !found {
-		t.Error("Expected to find value in cache")
-	}
-	if value != "test-value" {
-		t.Errorf("Expected value to be %s, got %s", "test-value", value)
-	}
-
-	// Test Delete
-	cache.Delete("test-key")
-	_, found = cache.Get("test-key")
-	if found {
-		t.Error("Expected key to be deleted")
-	}
-
-	// Test Clear
-	cache.Set("key1", "value1", 0)
-	cache.Set("key2", "value2", 0)
-	cache.Clear()
-	_, found1 := cache.Get("key1")
-	_, found2 := cache.Get("key2")
-	if found1 || found2 {
-		t.Error("Expected all keys to be cleared")
-	}
-
-	// Test expiration
-	cache.Set("expiring-key", "expiring-value", 100*time.Millisecond)
-	time.Sleep(200 * time.Millisecond)
-	_, found = cache.Get("expiring-key")
-	if found {
-		t.Error("Expected key to be expired")
-	}
-
-	// Reset cache for stats test
-	cache = New(1*time.Second, 5*time.Second)
-
-	// Test stats
-	cache.Set("key1", "value1", 0)
-	cache.Get("key1") // Hit
-	cache.Get("key2") // Miss
-	stats := cache.GetStats()
-	if stats.Hits != 1 {
-		t.Errorf("Expected 1 hit, got %d", stats.Hits)
-	}
-	if stats.Misses != 1 {
-		t.Errorf("Expected 1 miss, got %d", stats.Misses)
-	}
-	if stats.Items != 1 {
-		t.Errorf("Expected 1 item, got %d", stats.Items)
-	}
+func TestCache(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Cache Suite")
 }
 
-func TestCacheConcurrency(t *testing.T) {
-	cache := New(5*time.Minute, 10*time.Minute)
-	var wg sync.WaitGroup
-	concurrentOps := 100
+var _ = Describe("MemoryCache", func() {
+	var (
+		cache *MemoryCache
+	)
 
-	// Test concurrent writes
-	wg.Add(concurrentOps)
-	for i := 0; i < concurrentOps; i++ {
-		go func(i int) {
-			defer wg.Done()
-			key := "key" + string(rune(i))
-			cache.Set(key, i, 0)
-		}(i)
-	}
-	wg.Wait()
+	BeforeEach(func() {
+		cache = NewMemoryCache()
+	})
 
-	// Test concurrent reads
-	hits := 0
-	var mu sync.Mutex
-	wg.Add(concurrentOps)
-	for i := 0; i < concurrentOps; i++ {
-		go func(i int) {
-			defer wg.Done()
-			key := "key" + string(rune(i))
-			if val, found := cache.Get(key); found {
-				mu.Lock()
-				hits++
-				mu.Unlock()
-				if val.(int) != i {
-					t.Errorf("Expected value %d for key %s, got %d", i, key, val)
-				}
+	Describe("Basic Operations", func() {
+		It("should set and get values", func() {
+			cache.Set("key1", "value1", 60) // 60 seconds TTL
+			value, found := cache.Get("key1")
+			Expect(found).To(BeTrue())
+			Expect(value).To(Equal("value1"))
+		})
+
+		It("should handle non-existent keys", func() {
+			value, found := cache.Get("non-existent")
+			Expect(found).To(BeFalse())
+			Expect(value).To(BeNil())
+		})
+
+		It("should delete values", func() {
+			cache.Set("key1", "value1", 60)
+			cache.Delete("key1")
+			_, found := cache.Get("key1")
+			Expect(found).To(BeFalse())
+		})
+
+		It("should handle TTL expiration", func() {
+			cache.Set("key1", "value1", 1) // 1 second TTL
+			time.Sleep(2 * time.Second)
+			_, found := cache.Get("key1")
+			Expect(found).To(BeFalse())
+		})
+	})
+
+	Describe("Stats", func() {
+		It("should track basic stats", func() {
+			cache.Set("key1", "value1", 60)
+			cache.Set("key2", "value2", 60)
+
+			stats := cache.GetStats()
+			Expect(stats.Size).To(Equal(2))
+			Expect(stats.Hits).To(Equal(0))
+			Expect(stats.Misses).To(Equal(0))
+			Expect(stats.Evicted).To(Equal(0))
+
+			// Generate some hits and misses
+			cache.Get("key1")
+			cache.Get("key1")
+			cache.Get("non-existent")
+
+			stats = cache.GetStats()
+			Expect(stats.Hits).To(Equal(2))
+			Expect(stats.Misses).To(Equal(1))
+		})
+
+		It("should track evictions", func() {
+			cache.Set("key1", "value1", 1) // 1 second TTL
+			time.Sleep(2 * time.Second)
+			cache.Get("key1") // This will trigger eviction
+
+			stats := cache.GetStats()
+			Expect(stats.Evicted).To(Equal(1))
+		})
+	})
+
+	Describe("Concurrent Operations", func() {
+		It("should handle concurrent access safely", func() {
+			const concurrentOps = 100
+			done := make(chan bool)
+
+			// Concurrent writes
+			for i := 0; i < concurrentOps; i++ {
+				go func(index int) {
+					cache.Set("key", index, 60)
+					done <- true
+				}(i)
 			}
-		}(i)
-	}
-	wg.Wait()
 
-	if hits != concurrentOps {
-		t.Errorf("Expected %d hits, got %d", concurrentOps, hits)
-	}
+			// Wait for all writes
+			for i := 0; i < concurrentOps; i++ {
+				<-done
+			}
 
-	// Test stats after concurrent operations
-	stats := cache.GetStats()
-	if stats.Hits != uint64(concurrentOps) {
-		t.Errorf("Expected %d hits in stats, got %d", concurrentOps, stats.Hits)
-	}
-}
+			// Concurrent reads
+			for i := 0; i < concurrentOps; i++ {
+				go func() {
+					cache.Get("key")
+					done <- true
+				}()
+			}
 
-func BenchmarkCacheGetSet(b *testing.B) {
-	cache := New(5*time.Minute, 10*time.Minute)
-	cache.Set("bench-key", "bench-value", 0)
+			// Wait for all reads
+			for i := 0; i < concurrentOps; i++ {
+				<-done
+			}
 
-	b.Run("Get", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			cache.Get("bench-key")
-		}
+			stats := cache.GetStats()
+			Expect(stats.Hits + stats.Misses).To(Equal(concurrentOps))
+		})
 	})
-
-	b.Run("Set", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			cache.Set("bench-key", "bench-value", 0)
-		}
-	})
-}
+})

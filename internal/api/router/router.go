@@ -1,12 +1,16 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 
+	"github.com/menezmethod/ref_go/docs"
 	"github.com/menezmethod/ref_go/internal/api/handlers"
 	"github.com/menezmethod/ref_go/internal/api/middleware"
 	"github.com/menezmethod/ref_go/internal/auth"
@@ -23,6 +27,11 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 	if cfg.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	// Configure Swagger UI to use correct host
+	// Update Swagger info based on actual server config
+	docs.SwaggerInfo.Host = "localhost:" + fmt.Sprintf("%d", cfg.Server.Port)
+	logger.Info("Configured Swagger UI with host", zap.String("host", docs.SwaggerInfo.Host))
 
 	// Create a new Gin router
 	router := gin.New()
@@ -61,6 +70,14 @@ func New(cfg *config.Config, logger *zap.Logger, database *db.DB) http.Handler {
 	router.Use(middleware.SecurityHeaders())
 	router.Use(middleware.CORS([]string{"*"})) // For development - change in production
 	router.Use(middleware.Timeout(30 * time.Second))
+
+	// Serve Swagger UI
+	router.GET("/swagger/*any", func(c *gin.Context) {
+		logger.Info("Swagger endpoint accessed",
+			zap.String("path", c.Request.URL.Path),
+			zap.String("host", docs.SwaggerInfo.Host))
+		ginSwagger.WrapHandler(swaggerFiles.Handler)(c)
+	})
 
 	// Register health check and readiness endpoints (unprotected)
 	router.GET("/api/health", func(c *gin.Context) {

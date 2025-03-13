@@ -1,7 +1,12 @@
 package middleware
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +26,12 @@ const (
 // RequestID adds a unique request ID to each request
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := uuid.New().String()
+		// Check if request ID is provided in header
+		id := c.GetHeader("X-Request-ID")
+		if id == "" {
+			id = uuid.New().String()
+		}
+
 		c.Set(string(requestIDKey), id)
 		c.Header("X-Request-ID", id)
 		c.Next()
@@ -48,16 +58,56 @@ func Logging(baseLogger *zap.Logger) gin.HandlerFunc {
 		// Add logger to context
 		c.Set(string(loggerKey), requestLogger)
 
+		// Get request body for POST/PUT/PATCH requests
+		var body []byte
+		if c.Request.Method != "GET" && c.Request.Body != nil {
+			body, _ = c.GetRawData()
+			// Restore the request body for later use
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+		}
+
 		// Log request details
-		requestLogger.Info("Request started",
+		fields := []zap.Field{
 			zap.String("method", c.Request.Method),
 			zap.String("path", c.Request.URL.Path),
 			zap.String("remote_addr", c.ClientIP()),
 			zap.String("user_agent", c.Request.UserAgent()),
-		)
+		}
+		if len(body) > 0 {
+			// Parse body as JSON to redact sensitive fields
+			var jsonBody map[string]interface{}
+			if err := json.Unmarshal(body, &jsonBody); err == nil {
+				// Redact sensitive fields
+				sensitiveFields := []string{"password", "token", "secret", "key", "auth"}
+				for _, field := range sensitiveFields {
+					if _, exists := jsonBody[field]; exists {
+						jsonBody[field] = "[REDACTED]"
+					}
+				}
+				// Convert back to JSON
+				if redactedBody, err := json.Marshal(jsonBody); err == nil {
+					fields = append(fields, zap.String("body", string(redactedBody)))
+				}
+			}
+		}
+		requestLogger.Info("Request started", fields...)
 
 		// Process request
 		c.Next()
+
+		// Log any errors that occurred during request processing
+		if len(c.Errors) > 0 {
+			for _, err := range c.Errors {
+				fields := []zap.Field{
+					zap.Error(err.Err),
+					zap.Int("error_type", int(err.Type)),
+				}
+				if err.Meta != nil {
+					fields = append(fields, zap.Any("meta", err.Meta))
+				}
+				requestLogger.Error("Error occurred during request", fields...)
+			}
+		}
 
 		// Log response time and status
 		requestLogger.Info("Request completed",
@@ -82,9 +132,13 @@ func Recovery() gin.HandlerFunc {
 		defer func() {
 			if err := recover(); err != nil {
 				logger := GetLogger(c)
+				stack := make([]byte, 4096)
+				stack = stack[:runtime.Stack(stack, false)]
+
 				logger.Error("Recovered from panic",
 					zap.Any("error", err),
 					zap.String("path", c.Request.URL.Path),
+					zap.String("stack", string(stack)),
 				)
 
 				c.AbortWithStatusJSON(500, gin.H{"error": "Internal server error"})
@@ -98,25 +152,43 @@ func Recovery() gin.HandlerFunc {
 // Timeout middleware adds request timeout
 func Timeout(timeout time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Create a done channel to signal completion
+		done := make(chan bool, 1)
+		panicChan := make(chan interface{}, 1)
+
+		// Create timeout context
 		ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
 		defer cancel()
 
 		c.Request = c.Request.WithContext(ctx)
 
-		// Monitor context cancellation in a separate goroutine
-		done := make(chan struct{})
 		go func() {
-			select {
-			case <-ctx.Done():
-				if ctx.Err() == context.DeadlineExceeded {
-					c.AbortWithStatusJSON(408, gin.H{"error": "Request timeout"})
+			defer func() {
+				if p := recover(); p != nil {
+					panicChan <- p
 				}
-			case <-done:
-				// Request completed before timeout
-			}
+			}()
+
+			c.Next()
+			done <- true
 		}()
 
-		c.Next()
-		close(done)
+		select {
+		case p := <-panicChan:
+			panic(p) // Re-panic to let the Recovery middleware handle it
+		case <-done:
+			return
+		case <-ctx.Done():
+			if ctx.Err() == context.DeadlineExceeded {
+				logger := GetLogger(c)
+				logger.Warn("Request timed out",
+					zap.String("path", c.Request.URL.Path),
+					zap.Duration("timeout", timeout),
+				)
+				c.AbortWithStatusJSON(http.StatusGatewayTimeout, gin.H{
+					"error": "Request timeout",
+				})
+			}
+		}
 	}
 }
