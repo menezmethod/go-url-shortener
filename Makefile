@@ -1,4 +1,4 @@
-.PHONY: run build test lint clean deps docker-build docker-run migrate-up migrate-down migrate-create setup install-tools
+.PHONY: run build test lint clean deps docker-build docker-run migrate-up migrate-down migrate-create setup install-tools test-ginkgo test-coverage test-focus test-v
 
 # Build variables
 BINARY_NAME=urlshortener
@@ -43,7 +43,59 @@ run:
 # Test the application
 test:
 	@echo "Testing..."
-	@$(GOTEST) -v ./...
+	@if [ -f .env.test ]; then \
+		echo "Using .env.test for testing environment..."; \
+		export $$(grep -v '^#' .env.test | xargs) && $(GOTEST) -v ./...; \
+	else \
+		echo "Warning: .env.test not found. Using default test environment."; \
+		$(GOTEST) -v ./...; \
+	fi
+
+# Run tests with verbose output
+test-v:
+	@echo "Running tests with verbose output..."
+	@if [ -f .env.test ]; then \
+		echo "Using .env.test for testing environment..."; \
+		export $$(grep -v '^#' .env.test | xargs) && $(GOTEST) -v -count=1 ./...; \
+	else \
+		echo "Warning: .env.test not found. Using default test environment."; \
+		$(GOTEST) -v -count=1 ./...; \
+	fi
+
+# Run tests with Ginkgo
+test-ginkgo:
+	@echo "Running tests with Ginkgo..."
+	@if [ -f .env.test ]; then \
+		echo "Using .env.test for testing environment..."; \
+		export $$(grep -v '^#' .env.test | xargs) && ~/go/bin/ginkgo -r -v ./...; \
+	else \
+		echo "Warning: .env.test not found. Using default test environment."; \
+		~/go/bin/ginkgo -r -v ./...; \
+	fi
+
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	@if [ -f .env.test ]; then \
+		echo "Using .env.test for testing environment..."; \
+		export $$(grep -v '^#' .env.test | xargs) && ~/go/bin/ginkgo -r -v --cover --coverprofile=coverage.out ./...; \
+	else \
+		echo "Warning: .env.test not found. Using default test environment."; \
+		~/go/bin/ginkgo -r -v --cover --coverprofile=coverage.out ./...; \
+	fi
+	@go tool cover -html=coverage.out -o coverage.html
+	@go tool cover -func=coverage.out
+
+# Run focused tests
+test-focus:
+	@echo "Running focused tests..."
+	@if [ -f .env.test ]; then \
+		echo "Using .env.test for testing environment..."; \
+		export $$(grep -v '^#' .env.test | xargs) && ~/go/bin/ginkgo -r -v --focus="$(FOCUS)" ./...; \
+	else \
+		echo "Warning: .env.test not found. Using default test environment."; \
+		~/go/bin/ginkgo -r -v --focus="$(FOCUS)" ./...; \
+	fi
 
 # Lint the code
 lint:
@@ -109,4 +161,5 @@ migrate-create:
 install-tools:
 	@echo "Installing required development tools..."
 	@go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest 
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/onsi/ginkgo/v2/ginkgo@latest 

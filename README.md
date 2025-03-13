@@ -223,6 +223,57 @@ The service can be configured using environment variables:
 | `POSTGRES_CONN_MAX_LIFETIME` | DB connection lifetime | `15m` |
 | `SHORTLINK_DEFAULT_EXPIRY` | Default expiration for links | `30d` |
 
+## Testing Progress
+
+The project uses Ginkgo and Gomega for BDD-style testing. Current test coverage status:
+
+### Overall Coverage: 43.6%
+
+#### Well-Tested Components
+- Cache System: 100% coverage
+- Domain Logic: 100% coverage
+- Middleware: 96.6% coverage
+- Logger: 93.3% coverage
+- Configuration: 83.8% coverage
+- Service Layer: 74.6% coverage
+- Repository Layer: 67.2% coverage
+- Handlers: 38.6% coverage (Mock implementations at 100%)
+
+#### Components in Progress
+- API Handlers: Comprehensive test cases implemented, improving implementation coverage
+- Repository Layer: Enhancing coverage for complex operations
+
+#### Pending Components
+- Database Layer
+- Redis Integration
+- Authentication System
+- Metrics Collection
+
+### Test Environment Setup
+
+To run tests locally, you need to set up the test environment:
+
+1. Copy the test environment template:
+   ```bash
+   cp .env.test.example .env.test
+   ```
+
+2. Edit `.env.test` with your secure test credentials:
+   ```
+   TEST_POSTGRES_PASSWORD=your_secure_password_here
+   TEST_MASTER_PASSWORD=your_secure_master_password_here
+   TEST_JWT_SECRET=your_secure_jwt_secret_here
+   ```
+
+3. Run the tests:
+   ```bash
+   make test
+   # or for verbose output
+   make test-v
+   ```
+
+> **Security Note**: Never commit `.env.test` to version control. It's already included in `.gitignore`.
+
 ## Integration with Your Applications
 
 ### Direct API Integration

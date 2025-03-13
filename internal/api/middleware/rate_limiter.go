@@ -30,11 +30,16 @@ type tokenBucket struct {
 
 // NewRateLimiter creates a new rate limiter
 func NewRateLimiter(cfg *config.Config, logger *zap.Logger) *RateLimiter {
+	return NewRateLimiterWithCleanup(cfg, logger, 10*time.Minute)
+}
+
+// NewRateLimiterWithCleanup creates a new rate limiter with a custom cleanup period
+func NewRateLimiterWithCleanup(cfg *config.Config, logger *zap.Logger, cleanupPeriod time.Duration) *RateLimiter {
 	limiter := &RateLimiter{
 		buckets:       make(map[string]*tokenBucket),
 		capacity:      cfg.RateLimit.Requests,
 		refillRate:    cfg.RateLimit.Window,
-		cleanupPeriod: 10 * time.Minute, // Clean up buckets every 10 minutes
+		cleanupPeriod: cleanupPeriod,
 		logger:        logger,
 	}
 
@@ -140,10 +145,22 @@ func RateLimit(limiter *RateLimiter) gin.HandlerFunc {
 	}
 }
 
-// min returns the minimum of two integers
-func min(a, b int) int {
+// Min returns the minimum of two integers (exported for testing)
+func Min(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	return Min(a, b)
+}
+
+// GetBucketCount returns the current number of buckets (for testing)
+func (rl *RateLimiter) GetBucketCount() int {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	return len(rl.buckets)
 }

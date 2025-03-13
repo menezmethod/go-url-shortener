@@ -1,0 +1,103 @@
+---
+description: Cursor rules derived by SpecStory from the project AI interaction history
+globs: *
+---
+
+## PROJECT OVERVIEW
+This project is a URL shortener built using Go.  The project structure follows standard Go conventions.  The project uses Ginkgo and Gomega for testing. A new branch, `feature/ginkgo-test-coverage`, has been created to manage the test coverage implementation.  The project documentation is being updated to include a comprehensive testing guide.  Testing tools used include Ginkgo, Gomega, and httptest.  A task checklist for achieving 100% test coverage has been created and is being tracked in `docs/ginkgo_test_coverage.md`.  The project now includes a comprehensive guide on implementing Ginkgo and Gomega testing for 100% coverage.  A new branch `feature/ginkgo-test-coverage` has been created to manage this work.  The Makefile has been updated to include Ginkgo-specific test targets.  Ginkgo and Gomega have been added to the project dependencies. A test helper package (`internal/testutils`) has been created to include mock implementations and common testing utilities.  A markdown file (`docs/ginkgo_test_coverage.md`) outlines the strategy for achieving 100% test coverage.  This document will be updated regularly to reflect progress.  The document includes:
+    - Introduction to Ginkgo and Gomega
+    - Test Coverage Strategy
+    - Implementation Plan
+    - Testing Tools and Setup
+    - Writing Tests
+    - Integration with CI/CD
+    - Progress Tracking
+    - Troubleshooting
+    - Next Steps
+- Overall, our test coverage is at approximately **43.6%** across the entire codebase (up from 35.2%). Here's a breakdown of our current testing status:
+    - **Well-Tested Components**: Cache (100%), Domain (100%), Middleware (96.6%), Logger (93.3%), Config (83.8%), Service (74.6%), Repository (67.2%), Handlers (96.6%)
+    - **Partially Tested Components**:  
+    - **Untested Components**: DB (0%), Redis (0%), Auth (0%), Metrics (0%), Router (0%), Integration Tests (0%)
+
+
+## CODE STYLE
+Follow standard Go code style guidelines.
+
+## FOLDER ORGANIZATION
+The project uses a standard Go project layout:
+
+- `cmd`: Contains the main application executable.
+- `configs`: Configuration files.
+- `docs`: Project documentation.
+- `internal`: Internal project packages.
+- `migrations`: Database migration scripts.
+- `scripts`: Utility scripts.
+- `internal/testutils`: Test helper package containing mocks and utilities.
+
+## TECH STACK
+- Go
+- Gin
+- PostgreSQL
+- Redis
+- Ginkgo
+- Gomega
+
+## PROJECT-SPECIFIC STANDARDS
+- 100% test coverage target using Ginkgo and Gomega.
+- Comprehensive documentation for testing procedures.
+- Use of mocks for external dependencies.
+- Use of a task checklist (`docs/2025-03-09_19-23-task-checklist-for-100%-test-coverage.md`) to track progress towards 100% test coverage.
+- **Never hardcode secrets in source code.** Use environment variables or secure configuration files for sensitive information.  A `.env.test.example` file has been created to guide the setup of test environment variables.  The actual `.env.test` file should be added to `.gitignore`.  Use GitHub secrets for managing sensitive information in CI/CD environments.  For local development, override test environment variables by setting them before running tests.  **Use placeholders for secrets in test files.** Avoid hardcoding secrets directly; instead, utilize constants with placeholder values.  Refer to `internal/config/config_test.go` for an example of this best practice.
+
+## WORKFLOW & RELEASE RULES
+- Create a new branch for each feature.
+- Use Gitflow for branching and merging.
+- All code must pass linting and testing before merging.
+- Implement CI/CD pipeline for automated testing and deployment.
+- Utilize GitGuardian or similar secret detection tools during the CI/CD pipeline to prevent hardcoded secrets from being committed.
+- Use a `.env.test` file for managing test environment variables locally, but ensure it's added to `.gitignore` to prevent accidental commits.
+- Update GitHub Actions workflows to use the latest version of `actions/upload-artifact` (v4 or later) to address deprecation warnings.
+
+
+## REFERENCE EXAMPLES
+- Ginkgo: [https://onsi.github.io/ginkgo/](https://onsi.github.io/ginkgo/)
+- Gomega: [https://onsi.github.io/gomega/](https://onsi.github.io/gomega/)
+
+
+## PROJECT DOCUMENTATION & CONTEXT SYSTEM
+- A markdown file (`docs/ginkgo_test_coverage.md`) outlines the strategy for achieving 100% test coverage.  This document will be updated regularly to reflect progress.  This document includes:
+    - Introduction to Ginkgo and Gomega
+    - Test Coverage Strategy
+    - Implementation Plan
+    - Testing Tools and Setup
+    - Writing Tests
+    - Integration with CI/CD
+    - Progress Tracking
+    - Troubleshooting
+    - Next Steps
+- Overall, our test coverage is at approximately **43.6%** across the entire codebase (up from 35.2%). Here's a breakdown of our current testing status:
+    - **Well-Tested Components**: Cache (100%), Domain (100%), Middleware (96.6%), Logger (93.3%), Config (83.8%), Service (74.6%), Repository (67.2%), Handlers (96.6%)
+    - **Partially Tested Components**: 
+    - **Untested Components**: DB (0%), Redis (0%), Auth (0%), Metrics (0%), Router (0%), Integration Tests (0%)
+- Added `.env.test.example` file for managing test environment variables.  This file should be copied to `.env.test` and populated with secure values.  `.env.test` should be added to `.gitignore`.  README.md updated with instructions on setting up the test environment using `.env.test`. Makefile updated to use environment variables from `.env.test` if available.  GitHub Actions workflow created for automated testing using GitHub secrets for sensitive information.
+
+
+## DEBUGGING
+- Use Go's built-in debugging tools.
+- Utilize logging effectively.
+
+## FINAL DOs AND DON'Ts
+- **DO** write comprehensive tests.
+- **DO** use mocks for external dependencies.
+- **DO** follow the project's code style guidelines.
+- **DO** update the documentation as you make progress.
+- **DO** use environment variables for sensitive data, such as database credentials and API keys.  Use GitHub secrets for managing sensitive information in CI/CD environments.
+- **DO** add `.env.test` to your `.gitignore` file.
+- **DO** refer to the README for instructions on setting up the test environment.
+- **DO** run tests using the Makefile targets (`make test`, `make test-v`).
+- **DO** use placeholders for secrets in test files.
+- **DON'T** commit code that doesn't pass linting and testing.
+- **DON'T** merge code without proper code review.
+- **DON'T** hardcode secrets into your code.
+- **DON'T** commit `.env.test` to version control.
+- **DON'T** commit sensitive information directly to the repository.  Use environment variables and GitHub Secrets appropriately.
