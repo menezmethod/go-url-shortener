@@ -1,6 +1,7 @@
 ---
 description: Cursor rules derived by SpecStory from the project AI interaction history
 globs: *
+alwaysApply: false
 ---
 
 ## PROJECT OVERVIEW
@@ -18,6 +19,7 @@ This project is a URL shortener built using Go.  The project structure follows s
     - **Well-Tested Components**: Cache (100%), Domain (100%), Middleware (96.6%), Logger (93.3%), Config (83.8%), Service (74.6%), Repository (67.2%), Handlers (96.6%)
     - **Partially Tested Components**:  
     - **Untested Components**: DB (0%), Redis (0%), Auth (0%), Metrics (0%), Router (0%), Integration Tests (0%)
+- A new branch, `feature/complete-ginkgo-test-checklist`, has been created to manage the completion of the Ginkgo test checklist.
 
 
 ## CODE STYLE
@@ -48,6 +50,7 @@ The project uses a standard Go project layout:
 - Use of mocks for external dependencies.
 - Use of a task checklist (`docs/2025-03-09_19-23-task-checklist-for-100%-test-coverage.md`) to track progress towards 100% test coverage.
 - **Never hardcode secrets in source code.** Use environment variables or secure configuration files for sensitive information.  A `.env.test.example` file has been created to guide the setup of test environment variables.  The actual `.env.test` file should be added to `.gitignore`.  Use GitHub secrets for managing sensitive information in CI/CD environments.  For local development, override test environment variables by setting them before running tests.  **Use placeholders for secrets in test files.** Avoid hardcoding secrets directly; instead, utilize constants with placeholder values.  Refer to `internal/config/config_test.go` for an example of this best practice.
+- **Repository Pattern Decision:**  After reviewing the project's current implementation, it was decided to maintain the existing repository pattern due to performance considerations and the existing well-functioning application.  Consideration was given to ORMs such as GORM, SQLx, Ent, SQLBoiler, and pgx; however, the benefits of direct SQL control and avoidance of ORM overhead outweighed the potential advantages of using an ORM at this time.
 
 ## WORKFLOW & RELEASE RULES
 - Create a new branch for each feature.
@@ -57,11 +60,12 @@ The project uses a standard Go project layout:
 - Utilize GitGuardian or similar secret detection tools during the CI/CD pipeline to prevent hardcoded secrets from being committed.
 - Use a `.env.test` file for managing test environment variables locally, but ensure it's added to `.gitignore` to prevent accidental commits.
 - Update GitHub Actions workflows to use the latest version of `actions/upload-artifact` (v4 or later) to address deprecation warnings.
+- New branches should be created for each feature using `git checkout -b feature/<feature_name>`.
 
 
 ## REFERENCE EXAMPLES
-- Ginkgo: [https://onsi.github.io/ginkgo/](https://onsi.github.io/ginkgo/)
-- Gomega: [https://onsi.github.io/gomega/](https://onsi.github.io/gomega/)
+- Ginkgo: [https://onsi.github.io/ginkgo/](mdc:https:/onsi.github.io/ginkgo)
+- Gomega: [https://onsi.github.io/gomega/](mdc:https:/onsi.github.io/gomega)
 
 
 ## PROJECT DOCUMENTATION & CONTEXT SYSTEM

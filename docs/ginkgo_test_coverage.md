@@ -73,7 +73,6 @@ We aim to achieve 100% test coverage by systematically addressing each component
 
 - [x] Test data access packages:
   - [ ] internal/db
-  - [ ] internal/redis
   - [x] internal/cache
   - [x] internal/repository
 
@@ -93,7 +92,6 @@ We aim to achieve 100% test coverage by systematically addressing each component
 - [ ] Create integration tests for end-to-end flows
   - [ ] API endpoint integration tests
   - [ ] Database integration tests
-  - [ ] Redis integration tests
   - [ ] Authentication flow tests
 
 ## Testing Tools and Setup
@@ -303,7 +301,6 @@ jobs:
 | models      | ✅ Complete | 100.0%     | All model type tests completed                |
 | domain      | ✅ Complete | 100.0%     | Common domain errors and models               |
 | db          | ⏳ Pending  | 0.0%       | Need to implement tests with database mocking |
-| redis       | ⏳ Pending  | 0.0%       | Need to implement tests with Redis mocking    |
 | cache       | ✅ Complete | 100.0%     | In-memory cache implementation with concurrency tests |
 | repository  | ✅ Complete | 67.2%      | Link repository with DB mocks                 |
 | service     | ✅ Complete | 74.6%      | Link service, URL shortener, and cached service with mocks |
@@ -339,8 +336,7 @@ Overall, our test coverage has improved to approximately **52.8%** across the en
 - There are no partially tested components at this time. Components are either well-tested (>65% coverage) or untested.
 
 ### Untested Components
-- **Database**: 0% coverage - Need to implement with transaction mocking
-- **Redis**: 0% coverage - Need to implement with Redis client mocking
+- **Database**: 0% coverage - Need to implement with database mocking
 - **Auth**: 0% coverage - Need to implement with JWT testing
 - **Metrics**: 0% coverage - Need to implement with Prometheus mocking
 - **Router**: 0% coverage - Need to implement with HTTP testing
@@ -382,13 +378,10 @@ Overall, our test coverage has improved to approximately **52.8%** across the en
    - [ ] Test database error handling
    - [ ] Target at least 75% coverage for database package
 
-2. **Redis and Cache Testing (Priority: Medium)**:
-   - [ ] Create mocks for Redis client
+2. **Cache Testing (Priority: Medium)**:
    - [ ] Test cache invalidation strategies
    - [ ] Test cache miss and hit scenarios
-   - [ ] Test Redis connection error scenarios
-   - [ ] Test Redis health check functionality
-   - [ ] Target 100% coverage for Redis package
+   - [ ] Target 100% coverage for cache package
 
 3. **Authentication Testing (Priority: High)**:
    - [ ] Test JWT token generation and validation
@@ -396,7 +389,7 @@ Overall, our test coverage has improved to approximately **52.8%** across the en
    - [ ] Test authorization rules
    - [ ] Test token refresh mechanisms
    - [ ] Test invalid token scenarios
-   - [ ] Target 95% coverage for auth package
+   - [ ] Test 95% coverage for auth package
 
 4. **Metrics Testing (Priority: Medium)**:
    - [ ] Test Prometheus metric collection
@@ -411,10 +404,9 @@ Overall, our test coverage has improved to approximately **52.8%** across the en
    - [ ] Test route group organization
    - [ ] Target 80% coverage for router package
 
-6. **Integration Testing (Priority: High)**:
-   - [ ] Create end-to-end API flow tests
-   - [ ] Test database integration with real test database
-   - [ ] Test Redis integration with real test Redis instance
+6. **Integration Testing (Priority: Low)**:
+   - [ ] Set up test containers for integration tests
+   - [ ] Test API endpoints with actual database
    - [ ] Test authentication flow end-to-end
    - [ ] Test rate limiting in production scenarios
    - [ ] Target at least 10 comprehensive end-to-end test cases
