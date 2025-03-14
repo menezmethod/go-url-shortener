@@ -111,12 +111,26 @@ test-postman:
 	@echo "Ensuring application is running with Docker Compose..."
 	@if ! docker compose ps | grep -q "Up"; then \
 		echo "Starting application with Docker Compose..."; \
+		if [ ! -f .env.dev ]; then \
+			echo "Creating .env.dev file with default test values"; \
+			echo "PORT=8081" > .env.dev; \
+			echo "BASE_URL=http://localhost:8081" >> .env.dev; \
+			echo "ENVIRONMENT=test" >> .env.dev; \
+			echo "POSTGRES_HOST=postgres" >> .env.dev; \
+			echo "POSTGRES_PORT=5432" >> .env.dev; \
+			echo "POSTGRES_USER=postgres" >> .env.dev; \
+			echo "POSTGRES_PASSWORD=postgres_test_password" >> .env.dev; \
+			echo "POSTGRES_DB=url_shortener_test" >> .env.dev; \
+			echo "MASTER_PASSWORD=dev_master_password" >> .env.dev; \
+			echo "JWT_SECRET=dev_jwt_secret" >> .env.dev; \
+			echo "JWT_EXPIRATION=24h" >> .env.dev; \
+		fi; \
 		make run; \
 		echo "Waiting for application to start..."; \
 		sleep 10; \
 	fi
 	@echo "Creating test environment file for Newman..."
-	@MASTER_PASSWORD=$$(grep -E "^MASTER_PASSWORD=" .env.dev | cut -d'=' -f2)
+	@MASTER_PASSWORD=$$(grep -E "^MASTER_PASSWORD=" .env.dev | cut -d'=' -f2 || echo "dev_master_password")
 	@echo "Using master password from .env.dev: $${MASTER_PASSWORD}"
 	@echo '{' > newman-env.json
 	@echo '  "name": "URL_Shortener_API_Local_Environment",' >> newman-env.json

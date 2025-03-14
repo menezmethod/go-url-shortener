@@ -1,67 +1,46 @@
+version: '3.8'
+
 services:
   app:
     image: golang:1.23.4-alpine
-    command: >
-      sh -c "cd /app &&
-             go install github.com/swaggo/swag/cmd/swag@latest &&
-             swag init -g cmd/server/main.go -o docs &&
-             go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest &&
-             go build -o urlshortener ./cmd/server &&
-             ./urlshortener"
+    working_dir: /app
+    command: sh -c "
+      apk add --no-cache ca-certificates git curl &&
+      go mod download &&
+      go build -o urlshortener ./cmd/server &&
+      ./urlshortener
+      "
     ports:
-      - "${APP_PORT:-8081}:8081"
+      - "8081:8081"
     environment:
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB:-url_shortener}
-      - MASTER_PASSWORD=${MASTER_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
-      - LOG_LEVEL=${LOG_LEVEL:-notice}
-      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-60}
-      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW:-60}
-      - READ_TIMEOUT=${READ_TIMEOUT:-30s}
-      - WRITE_TIMEOUT=${WRITE_TIMEOUT:-30s}
-      - IDLE_TIMEOUT=${IDLE_TIMEOUT:-120s}
-      - POSTGRES_MAX_CONNECTIONS=${POSTGRES_MAX_CONNECTIONS:-25}
-      - POSTGRES_MAX_IDLE_CONNECTIONS=${POSTGRES_MAX_IDLE_CONNECTIONS:-5}
-      - POSTGRES_CONN_MAX_LIFETIME=${POSTGRES_CONN_MAX_LIFETIME:-15m}
-      - SHORTLINK_DEFAULT_EXPIRY=${SHORTLINK_DEFAULT_EXPIRY:-30d}
-      - BASE_URL=${BASE_URL:-http://localhost:8081}
+      - PORT=8081
+      - BASE_URL=http://localhost:8081
+      - ENVIRONMENT=test
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_test_password
+      - POSTGRES_DB=url_shortener_test
+      - MASTER_PASSWORD=dev_master_password
+      - JWT_SECRET=dev_jwt_secret
+      - JWT_EXPIRATION=24h
     volumes:
       - .:/app
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
     depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
+      - postgres
     networks:
       - url-shortener
 
   postgres:
     image: postgres:17-alpine
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB:-url_shortener}
-    ports:
-      - "${POSTGRES_EXTERNAL_PORT:-5433}:5432"
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_test_password
+      - POSTGRES_DB=url_shortener_test
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
+    ports:
+      - "5433:5432"
     networks:
       - url-shortener
 

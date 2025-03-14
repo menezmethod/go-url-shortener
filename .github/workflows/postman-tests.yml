@@ -27,36 +27,11 @@ jobs:
     - name: Set up Docker Compose
       uses: isbang/compose-action@v1.5.1
 
-    - name: Create .env.dev file for Docker Compose
-      run: |
-        cat > .env.dev << EOL
-        # API Configuration
-        PORT=8081
-        BASE_URL=http://localhost:8081
-        ENVIRONMENT=test
-        
-        # PostgreSQL Configuration
-        POSTGRES_HOST=postgres
-        POSTGRES_PORT=5432
-        POSTGRES_USER=postgres
-        POSTGRES_PASSWORD=${{ secrets.TEST_POSTGRES_PASSWORD }}
-        POSTGRES_DB=url_shortener_test
-        
-        # Auth Configuration
-        MASTER_PASSWORD=${{ secrets.TEST_MASTER_PASSWORD }}
-        JWT_SECRET=${{ secrets.TEST_JWT_SECRET }}
-        JWT_EXPIRATION=24h
-        
-        # Redis Configuration (optional)
-        REDIS_HOST=redis
-        REDIS_PORT=6379
-        REDIS_PASSWORD=
-        EOL
-
     - name: Start services with CI-specific Docker Compose
       run: |
         # Use the CI-specific docker-compose file
-        docker compose -f docker-compose.ci.yml --env-file .env.dev up -d
+        echo "Starting Docker Compose services..."
+        docker compose -f docker-compose.ci.yml up -d
         
         # Wait for services to be ready
         echo "Waiting for services to start..."
@@ -66,14 +41,10 @@ jobs:
         echo "Docker Compose services status:"
         docker compose -f docker-compose.ci.yml ps
         echo "Container logs:"
-        docker compose -f docker-compose.ci.yml logs --tail=30
+        docker compose -f docker-compose.ci.yml logs --tail=50
 
     - name: Create Newman environment file
       run: |
-        # Extract master password from .env.dev for logging purposes
-        MASTER_PASSWORD=$(grep -E "^MASTER_PASSWORD=" .env.dev | cut -d'=' -f2)
-        echo "Creating Newman environment file with master password from .env.dev: $MASTER_PASSWORD"
-        
         cat > newman-environment.json << EOL
         {
           "name": "URL_Shortener_API_CI_Environment",
@@ -90,7 +61,7 @@ jobs:
             },
             {
               "key": "masterPassword",
-              "value": "$MASTER_PASSWORD",
+              "value": "dev_master_password",
               "enabled": true
             }
           ]
