@@ -133,7 +133,7 @@ test-postman:
 	@echo '    },' >> newman-env.json
 	@echo '    {' >> newman-env.json
 	@echo '      "key": "masterPassword",' >> newman-env.json
-	@echo '      "value": "devpassword",' >> newman-env.json
+	@echo '      "value": "$${MASTER_PASSWORD}",' >> newman-env.json
 	@echo '      "enabled": true' >> newman-env.json
 	@echo '    }' >> newman-env.json
 	@echo '  ]' >> newman-env.json
