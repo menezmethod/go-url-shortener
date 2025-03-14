@@ -109,7 +109,7 @@ test-postman:
 		npm install -g newman newman-reporter-htmlextra; \
 	fi
 	@echo "Ensuring application is running with Docker Compose..."
-	@if ! docker-compose ps | grep -q "Up"; then \
+	@if ! docker compose ps | grep -q "Up"; then \
 		echo "Starting application with Docker Compose..."; \
 		make run; \
 		echo "Waiting for application to start..."; \
@@ -183,20 +183,20 @@ docker-compose-restart: docker-compose-down docker-compose-up
 # Docker compose up with development environment
 docker-compose-up:
 	@echo "Starting services with Docker Compose..."
-	@docker-compose --env-file .env.dev build
-	@docker-compose --env-file .env.dev up -d
+	@docker compose --env-file .env.dev build
+	@docker compose --env-file .env.dev up -d
 
 # Docker compose down
 docker-compose-down:
 	@echo "Stopping services with Docker Compose..."
-	@docker-compose down
+	@docker compose down
 
 # Docker compose status
 docker-compose-status:
 	@echo "Docker Compose Status:"
-	@docker-compose ps
+	@docker compose ps
 	@echo "\nContainer Logs:"
-	@docker-compose logs --tail=20
+	@docker compose logs --tail=20
 
 # Run database migrations
 migrate-up:

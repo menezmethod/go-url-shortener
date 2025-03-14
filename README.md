@@ -153,7 +153,7 @@ If you encounter issues with the Postman tests:
 
 2. Inspect the container logs:
    ```bash
-   docker-compose logs
+   docker compose logs
    ```
 
 3. Ensure the master password in your `.env.dev` file matches what's being used in the Postman collection
