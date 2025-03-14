@@ -8,17 +8,9 @@ services:
       sh -c "
       apk add --no-cache ca-certificates git curl netcat-openbsd &&
       go mod download &&
-      # Wait for Postgres to be ready
       echo 'Waiting for PostgreSQL to start...' &&
-      for i in {1..30}; do
-        if nc -z postgres 5432; then
-          echo 'PostgreSQL is up and running!' &&
-          break
-        fi
-        echo 'Waiting for PostgreSQL...' &&
-        sleep 1
-      done &&
-      # Build with VCS flag disabled (fixes CI build issue)
+      until nc -z postgres 5432; do echo 'Waiting for PostgreSQL...'; sleep 1; done &&
+      echo 'PostgreSQL is up and running!' &&
       go build -buildvcs=false -o urlshortener ./cmd/server &&
       echo 'Starting URL Shortener API...' &&
       ./urlshortener
@@ -43,6 +35,9 @@ services:
       - postgres
     networks:
       - url-shortener
+    hostname: app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   postgres:
     image: postgres:17-alpine
@@ -56,6 +51,7 @@ services:
       - "5433:5432"
     networks:
       - url-shortener
+    hostname: postgres
 
 networks:
   url-shortener:

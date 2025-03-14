@@ -44,6 +44,10 @@ jobs:
         docker compose -f docker-compose.ci.yml ps
         echo "Container logs:"
         docker compose -f docker-compose.ci.yml logs --tail=100
+        
+        # Get the container IP
+        APP_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' go-url-shortener-app-1)
+        echo "App container IP: $APP_IP"
 
     - name: Create Newman environment file
       run: |
@@ -53,7 +57,7 @@ jobs:
           "values": [
             {
               "key": "baseUrl",
-              "value": "http://localhost:8081",
+              "value": "http://app:8081",
               "enabled": true
             },
             {
@@ -72,10 +76,15 @@ jobs:
 
     - name: Run Postman collection tests
       run: |
-        newman run ./postman/collections/master_collection.json \
-          -e newman-environment.json \
+        # Run newman inside the Docker network
+        docker run --rm --network go-url-shortener_url-shortener \
+          -v $(pwd)/postman/collections:/etc/newman \
+          -v $(pwd)/newman-environment.json:/etc/newman/environment.json \
+          -v $(pwd)/postman-results.html:/etc/newman/postman-results.html \
+          postman/newman:latest run /etc/newman/master_collection.json \
+          -e /etc/newman/environment.json \
           --reporters cli,htmlextra \
-          --reporter-htmlextra-export postman-results.html \
+          --reporter-htmlextra-export /etc/newman/postman-results.html \
           --bail
 
     - name: Upload Postman test results
