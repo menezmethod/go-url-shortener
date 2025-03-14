@@ -16,6 +16,20 @@ import (
 	"github.com/menezmethod/ref_go/internal/repository"
 )
 
+// Define reserved aliases that should not be used as custom aliases
+var reservedAliases = []string{
+	"metrics", // Prometheus metrics endpoint
+	"api",     // API prefix
+	"swagger", // Swagger documentation
+	"health",  // Health check endpoint
+	"ready",   // Readiness check endpoint
+	"auth",    // Authentication endpoints
+	"static",  // Static files if any
+	"docs",    // Documentation
+	"admin",   // Admin panel if any
+	"status",  // Status information
+}
+
 // URLShortenerService handles URL shortening operations
 type URLShortenerService struct {
 	urlRepo       repository.URLRepository
@@ -87,6 +101,11 @@ func (s *URLShortenerService) CreateShortLink(ctx context.Context, req *domain.C
 	if req.CustomAlias != nil && *req.CustomAlias != "" {
 		code = *req.CustomAlias
 
+		// Check if custom alias is a reserved word
+		if s.isReservedAlias(code) {
+			return nil, fmt.Errorf("custom alias '%s' is reserved and cannot be used", code)
+		}
+
 		// Check if custom alias is already in use
 		existingLink, err := s.linkRepo.GetByCustomAlias(ctx, code)
 		if err != nil && !strings.Contains(err.Error(), "not found") {
@@ -111,6 +130,14 @@ func (s *URLShortenerService) CreateShortLink(ctx context.Context, req *domain.C
 			if existingLink == nil {
 				// Code is available
 				break
+			}
+
+			// Ensure the generated code is not a reserved alias
+			if s.isReservedAlias(code) {
+				// Generate a different code
+				attempts++
+				code = s.generateCode(hash + fmt.Sprintf("-%d", attempts))
+				continue
 			}
 
 			// Code collision, try with a different variation
@@ -440,4 +467,18 @@ func parseUserAgent(userAgent string) (browser, os, device string) {
 	}
 
 	return browser, os, device
+}
+
+// isReservedAlias checks if a custom alias is in the list of reserved aliases
+func (s *URLShortenerService) isReservedAlias(alias string) bool {
+	// Convert alias to lowercase for case-insensitive comparison
+	lowercaseAlias := strings.ToLower(alias)
+
+	for _, reserved := range reservedAliases {
+		if lowercaseAlias == reserved {
+			return true
+		}
+	}
+
+	return false
 }

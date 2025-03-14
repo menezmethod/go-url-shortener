@@ -654,6 +654,21 @@ var _ = Describe("Service Suite", func() {
 				})
 			})
 
+			Context("when the custom alias is a reserved word", func() {
+				BeforeEach(func() {
+					customAlias := "metrics"
+					req.CustomAlias = &customAlias
+				})
+
+				It("should return an error", func() {
+					link, err := svc.CreateShortLink(ctx, req)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("reserved and cannot be used"))
+					Expect(link).To(BeNil())
+				})
+			})
+
 			Context("when the URL is invalid", func() {
 				BeforeEach(func() {
 					req.URL = "invalid-url"
