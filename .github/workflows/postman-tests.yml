@@ -1,0 +1,99 @@
+name: Postman API Tests
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  postman-tests:
+    name: Run Postman Collection Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Newman
+      run: npm install -g newman newman-reporter-htmlextra
+
+    # Set up Docker Compose with CI-specific file explicitly
+    - name: Set up Docker Compose
+      uses: isbang/compose-action@v1.5.1
+      with:
+        compose-file: "./docker-compose.ci.yml"
+
+    - name: Start services with CI-specific Docker Compose
+      run: |
+        # Use the CI-specific docker-compose file
+        echo "Starting Docker Compose services..."
+        docker compose -f docker-compose.ci.yml up -d
+        
+        # Wait for services to be ready
+        echo "Waiting for services to start..."
+        sleep 60
+        
+        # Debug output
+        echo "Docker Compose services status:"
+        docker compose -f docker-compose.ci.yml ps
+        echo "Container logs:"
+        docker compose -f docker-compose.ci.yml logs --tail=100
+        
+        # Get the container IP
+        APP_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' go-url-shortener-app-1)
+        echo "App container IP: $APP_IP"
+
+    - name: Create Newman environment file
+      run: |
+        cat > newman-environment.json << EOL
+        {
+          "name": "URL_Shortener_API_CI_Environment",
+          "values": [
+            {
+              "key": "baseUrl",
+              "value": "http://app:8081",
+              "enabled": true
+            },
+            {
+              "key": "apiPath",
+              "value": "api",
+              "enabled": true
+            },
+            {
+              "key": "masterPassword",
+              "value": "dev_master_password",
+              "enabled": true
+            }
+          ]
+        }
+        EOL
+
+    - name: Run Postman collection tests
+      run: |
+        # Run newman inside the Docker network
+        docker run --rm --network go-url-shortener_url-shortener \
+          -v $(pwd)/postman/collections:/etc/newman \
+          -v $(pwd)/newman-environment.json:/etc/newman/environment.json \
+          -v $(pwd)/postman-results.html:/etc/newman/postman-results.html \
+          postman/newman:latest run /etc/newman/master_collection.json \
+          -e /etc/newman/environment.json \
+          --reporters cli,htmlextra \
+          --reporter-htmlextra-export /etc/newman/postman-results.html \
+          --bail
+
+    - name: Upload Postman test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: postman-test-results
+        path: postman-results.html
+        
+    - name: Stop Docker Compose services
+      if: always()
+      run: docker compose -f docker-compose.ci.yml down 

@@ -1,0 +1,438 @@
+{
+	"info": {
+		"_postman_id": "dada279f-619d-4169-bef3-c7699db4152a",
+		"name": "RFTO.us API - Master Collection",
+		"description": "A comprehensive test suite for the URL Shortener API. This collection includes authentication, link creation, retrieval, updates, deletion, and analytics.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18112029"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Get Authentication Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test successful token generation",
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has the correct structure\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('object');",
+									"    pm.expect(jsonData).to.have.property('token');",
+									"    pm.expect(jsonData.token).to.be.a('string');",
+									"    pm.expect(jsonData.token).to.not.be.empty;",
+									"});",
+									"",
+									"// Store token for future requests if successful",
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set('authToken', jsonData.token);",
+									"    console.log('Token stored in environment variable: authToken');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Setup for authentication request",
+									"console.log('Preparing to authenticate with master password');"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"master_password\": \"{{masterPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{apiPath}}/auth/token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiPath}}",
+								"auth",
+								"token"
+							]
+						},
+						"description": "Get a JWT token for API authentication"
+					},
+					"response": []
+				}
+			],
+			"description": "Contains all authentication-related requests"
+		},
+		{
+			"name": "Link Management",
+			"item": [
+				{
+					"name": "Create Short Link",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate random test data for link creation",
+									"const randomString = Math.random().toString(36).substring(2, 8);",
+									"pm.environment.set('customAlias', 'test-' + randomString);",
+									"",
+									"// Set future expiration date (30 days from now)",
+									"const futureDate = new Date();",
+									"futureDate.setDate(futureDate.getDate() + 30);",
+									"pm.environment.set('expirationDate', futureDate.toISOString());"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test successful short link creation",
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"// Store the generated short code for future tests",
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set('shortCode', jsonData.code);",
+									"    console.log('Short code stored in environment variable: ' + jsonData.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"url\": \"{{testUrl}}\",\n    \"custom_alias\": \"{{customAlias}}\",\n    \"expiration_date\": \"{{expirationDate}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{apiPath}}/links",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiPath}}",
+								"links"
+							]
+						},
+						"description": "Create a new short link"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Short Link",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test successful retrieval of short link",
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiPath}}/links/{{shortCode}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiPath}}",
+								"links",
+								"{{shortCode}}"
+							]
+						},
+						"description": "Get details of a short link by its code"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Short Link",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate updated test data",
+									"const randomString = Math.random().toString(36).substring(2, 8);",
+									"pm.environment.set('updatedAlias', 'updated-' + randomString);",
+									"",
+									"// Set updated expiration date (60 days from now)",
+									"const futureDate = new Date();",
+									"futureDate.setDate(futureDate.getDate() + 60);",
+									"pm.environment.set('updatedExpirationDate', futureDate.toISOString());"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test successful update of short link",
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"custom_alias\": \"{{updatedAlias}}\",\n    \"expiration_date\": \"{{updatedExpirationDate}}\",\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{apiPath}}/links/{{shortCode}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiPath}}",
+								"links",
+								"{{shortCode}}"
+							]
+						},
+						"description": "Update an existing short link"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Link Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test successful retrieval of link statistics",
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiPath}}/links/{{shortCode}}/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiPath}}",
+								"links",
+								"{{shortCode}}",
+								"stats"
+							]
+						},
+						"description": "Get usage statistics for a short link"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Short Link",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test successful deletion of short link",
+									"pm.test(\"Status code is 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiPath}}/links/{{shortCode}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiPath}}",
+								"links",
+								"{{shortCode}}"
+							]
+						},
+						"description": "Delete a short link"
+					},
+					"response": []
+				}
+			],
+			"description": "Contains requests for creating, retrieving, updating, and deleting short links"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global Pre-request Script",
+					"console.log('Running master collection pre-request script');",
+					"",
+					"// Check for required environment variables",
+					"if (!pm.environment.get('baseUrl')) {",
+					"    console.warn('Warning: baseUrl is not set in the environment');",
+					"}",
+					"",
+					"if (!pm.environment.get('apiPath')) {",
+					"    console.warn('Warning: apiPath is not set in the environment');",
+					"}",
+					"",
+					"if (!pm.environment.get('masterPassword')) {",
+					"    console.warn('Warning: masterPassword is not set in the environment');",
+					"}",
+					"",
+					"// Set default test URL if not already set",
+					"if (!pm.environment.get('testUrl')) {",
+					"    pm.environment.set('testUrl', 'https://example.com/test-page');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global Tests",
+					"console.log('Running master collection test script');",
+					"",
+					"// Common tests for all requests",
+					"pm.test('Response time is acceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(1000);",
+					"});",
+					"",
+					"// For any non-204 responses",
+					"if (pm.response.code !== 204) {",
+					"    pm.test('Content-Type header is present', function () {",
+					"        pm.response.to.have.header('Content-Type');",
+					"    });",
+					"}",
+					"",
+					"// Log response info for debugging",
+					"console.log('Response status: ' + pm.response.code);",
+					"console.log('Response time: ' + pm.response.responseTime + 'ms');"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8081",
+			"type": "string"
+		},
+		{
+			"key": "apiPath",
+			"value": "api",
+			"type": "string"
+		}
+	]
+}

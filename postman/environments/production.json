@@ -1,0 +1,57 @@
+{
+  "id": "f8e9d7c6-b5a4-3c2d-1e0f-9a8b7c6d5e4f",
+  "name": "RFTO.us API Production Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "https://rfto.us",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "apiPath",
+      "value": "api",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "masterPassword",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "shortCode",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "customAlias",
+      "value": "custom-test-link",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testUrl",
+      "value": "https://example.com/test-page",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "expirationDate",
+      "value": "{{$isoTimestamp}}",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2023-04-20T12:00:00.000Z",
+  "_postman_exported_using": "Postman/10.12.0"
+} 

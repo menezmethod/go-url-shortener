@@ -66,5 +66,5 @@ volumes:
   postgres_data:
 
 # Specify which .env file to use
-# For local development: docker-compose --env-file .env.dev up
-# For production: docker-compose up (will use .env by default) 
+# For local development: docker compose --env-file .env.dev up
+# For production: docker compose up (will use .env by default) % 

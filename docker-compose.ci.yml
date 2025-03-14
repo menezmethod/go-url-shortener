@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    image: golang:1.23.4-alpine
+    working_dir: /app
+    command: >
+      sh -c "
+      apk add --no-cache ca-certificates git curl netcat-openbsd &&
+      go mod download &&
+      echo 'Waiting for PostgreSQL to start...' &&
+      until nc -z postgres 5432; do echo 'Waiting for PostgreSQL...'; sleep 1; done &&
+      echo 'PostgreSQL is up and running!' &&
+      go build -buildvcs=false -o urlshortener ./cmd/server &&
+      echo 'Starting URL Shortener API...' &&
+      ./urlshortener
+      "
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - BASE_URL=http://localhost:8081
+      - ENVIRONMENT=test
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_test_password
+      - POSTGRES_DB=url_shortener_test
+      - MASTER_PASSWORD=dev_master_password
+      - JWT_SECRET=dev_jwt_secret
+      - JWT_EXPIRATION=24h
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+    networks:
+      - url-shortener
+    hostname: app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_test_password
+      - POSTGRES_DB=url_shortener_test
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - url-shortener
+    hostname: postgres
+
+networks:
+  url-shortener:
+    driver: bridge
+
+volumes:
+  postgres_data: 

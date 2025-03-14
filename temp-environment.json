@@ -1,0 +1,54 @@
+{
+  "id": "temp-environment",
+  "name": "Temporary API Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "apiPath",
+      "value": "api",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "masterPassword",
+      "value": "development_master_password",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "shortCode",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "customAlias",
+      "value": "custom-test-link",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testUrl",
+      "value": "https://example.com/test-page",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "expirationDate",
+      "value": "2030-12-31T23:59:59Z",
+      "type": "default",
+      "enabled": true
+    }
+  ]
+} 
