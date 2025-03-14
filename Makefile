@@ -38,7 +38,7 @@ build:
 
 # Run the application using Docker Compose
 run: docker-compose-restart
-	@echo "Application is running in the background. Use 'docker-compose logs -f' to view logs."
+	@echo "Application is running in the background. Use 'docker compose logs -f' to view logs."
 
 # Run the application locally (renamed the old run command)
 run-local:

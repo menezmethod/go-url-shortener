@@ -53,33 +53,20 @@ jobs:
         REDIS_PASSWORD=
         EOL
 
-    - name: Set up QEMU for multi-architecture support
-      uses: docker/setup-qemu-action@v3
-
-    - name: Start services with Docker Compose
+    - name: Start services with CI-specific Docker Compose
       run: |
-        # Configure Docker to handle the multi-architecture builds
-        # This allows building ARM images on x86 platforms
-        docker run --privileged --rm tonistiigi/binfmt --install all
-        
-        # Use Docker Compose with platform override for CI environment only
-        docker compose --env-file .env.dev build \
-          --build-arg BUILDPLATFORM=linux/amd64 \
-          --build-arg TARGETPLATFORM=linux/amd64 \
-          --build-arg TARGETOS=linux \
-          --build-arg TARGETARCH=amd64
-        
-        docker compose --env-file .env.dev up -d
+        # Use the CI-specific docker-compose file
+        docker compose -f docker-compose.ci.yml --env-file .env.dev up -d
         
         # Wait for services to be ready
         echo "Waiting for services to start..."
-        sleep 15
+        sleep 30
         
         # Debug output
         echo "Docker Compose services status:"
-        docker compose ps
+        docker compose -f docker-compose.ci.yml ps
         echo "Container logs:"
-        docker compose logs --tail=20
+        docker compose -f docker-compose.ci.yml logs --tail=30
 
     - name: Create Newman environment file
       run: |
@@ -127,4 +114,4 @@ jobs:
         
     - name: Stop Docker Compose services
       if: always()
-      run: docker compose down 
+      run: docker compose -f docker-compose.ci.yml down 
