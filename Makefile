@@ -1,4 +1,4 @@
-.PHONY: run build test lint clean deps docker-build docker-run migrate-up migrate-down migrate-create setup install-tools test-ginkgo test-coverage test-focus test-v
+.PHONY: run build test lint clean deps docker-build docker-run migrate-up migrate-down migrate-create setup install-tools test-ginkgo test-coverage test-focus test-v test-postman
 
 # Build variables
 BINARY_NAME=urlshortener
@@ -97,6 +97,44 @@ test-focus:
 		~/go/bin/ginkgo -r -v --focus="$(FOCUS)" ./...; \
 	fi
 
+# Run Postman tests
+test-postman:
+	@echo "Running Postman tests..."
+	@if ! command -v newman &> /dev/null; then \
+		echo "Newman not found. Installing..."; \
+		npm install -g newman newman-reporter-htmlextra; \
+	fi
+	@echo "Creating test environment file for Newman..."
+	@if [ -f .env.test ]; then \
+		echo "Using .env.test for test environment..."; \
+		export $$(grep -v '^#' .env.test | xargs); \
+	else \
+		echo "Warning: .env.test not found. Using default environment variables."; \
+	fi
+	@echo '{' > newman-env.json
+	@echo '  "name": "URL_Shortener_API_Local_Environment",' >> newman-env.json
+	@echo '  "values": [' >> newman-env.json
+	@echo '    {' >> newman-env.json
+	@echo '      "key": "baseUrl",' >> newman-env.json
+	@echo '      "value": "http://localhost:8081",' >> newman-env.json
+	@echo '      "enabled": true' >> newman-env.json
+	@echo '    },' >> newman-env.json
+	@echo '    {' >> newman-env.json
+	@echo '      "key": "apiPath",' >> newman-env.json
+	@echo '      "value": "/api",' >> newman-env.json
+	@echo '      "enabled": true' >> newman-env.json
+	@echo '    },' >> newman-env.json
+	@echo '    {' >> newman-env.json
+	@echo '      "key": "masterPassword",' >> newman-env.json
+	@echo '      "value": "$(MASTER_PASSWORD)",' >> newman-env.json
+	@echo '      "enabled": true' >> newman-env.json
+	@echo '    }' >> newman-env.json
+	@echo '  ]' >> newman-env.json
+	@echo '}' >> newman-env.json
+	@echo "Running Postman collection with Newman..."
+	@newman run ./postman/collections/master_collection.json -e newman-env.json --reporters cli,htmlextra --reporter-htmlextra-export postman-results.html
+	@echo "Test results saved to postman-results.html"
+
 # Lint the code
 lint:
 	@echo "Linting..."
@@ -162,4 +200,5 @@ install-tools:
 	@echo "Installing required development tools..."
 	@go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@go install github.com/onsi/ginkgo/v2/ginkgo@latest 
+	@go install github.com/onsi/ginkgo/v2/ginkgo@latest
+	@npm install -g newman newman-reporter-htmlextra 

@@ -110,6 +110,50 @@ npm install -g newman
 newman run ./postman/collections/URL_Shortener_API_Master.json -e ./postman/environments/URL_Shortener_API_Environment.json
 ```
 
+## Running Postman Tests
+
+This project includes a comprehensive Postman collection for API testing. You can run these tests either locally or as part of the CI/CD pipeline.
+
+### Running Tests Locally
+
+1. Make sure you have the application running locally:
+   ```bash
+   make run
+   ```
+
+2. Install Newman (the Postman CLI) if you don't have it already:
+   ```bash
+   npm install -g newman newman-reporter-htmlextra
+   ```
+
+3. Run the tests using the Makefile command:
+   ```bash
+   make test-postman
+   ```
+   This will generate an HTML report in the project root called `postman-results.html`.
+
+4. Alternatively, you can run Newman directly:
+   ```bash
+   newman run ./postman/collections/master_collection.json -e ./postman/environments/local.json --reporters cli,htmlextra --reporter-htmlextra-export postman-results.html
+   ```
+
+### Running Tests in CI/CD Pipeline
+
+The Postman tests are automatically run as part of the GitHub Actions workflow when you push to main or develop branches, or create a pull request to these branches.
+
+1. Tests are defined in the `.github/workflows/postman-tests.yml` file
+2. The workflow:
+   - Sets up a PostgreSQL database
+   - Builds and starts the application
+   - Runs the Postman collection using Newman
+   - Generates an HTML report and uploads it as an artifact
+
+3. You can view the test results in the GitHub Actions tab of your repository.
+
+4. To run the workflow manually, go to the Actions tab in your GitHub repository and select "Postman API Tests" from the workflows list, then click "Run workflow".
+
+For more details on the Postman collections, see the [Postman README](postman/README.md).
+
 ## Authentication
 
 The API uses JWT-based authentication:

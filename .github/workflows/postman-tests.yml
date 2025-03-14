@@ -1,0 +1,112 @@
+name: Postman API Tests
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  postman-tests:
+    name: Run Postman Collection Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
+          POSTGRES_DB: url_shortener_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Newman
+      run: npm install -g newman newman-reporter-htmlextra
+
+    - name: Build and start application
+      env:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
+        POSTGRES_DB: url_shortener_test
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
+        MASTER_PASSWORD: ${{ secrets.TEST_MASTER_PASSWORD }}
+        JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+        BASE_URL: http://localhost:8081
+        ENVIRONMENT: test
+      run: |
+        # Build the application
+        go build -o ./build/urlshortener ./cmd/server
+        
+        # Run database migrations
+        go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+        migrate -path ./migrations/postgres -database "postgres://postgres:${{ secrets.TEST_POSTGRES_PASSWORD }}@localhost:5432/url_shortener_test?sslmode=disable" up
+        
+        # Start the server in background
+        ./build/urlshortener &
+        
+        # Wait for the server to be ready
+        sleep 10
+
+    - name: Create Newman environment file
+      run: |
+        cat > newman-environment.json << EOL
+        {
+          "name": "URL_Shortener_API_CI_Environment",
+          "values": [
+            {
+              "key": "baseUrl",
+              "value": "http://localhost:8081",
+              "enabled": true
+            },
+            {
+              "key": "apiPath",
+              "value": "/api",
+              "enabled": true
+            },
+            {
+              "key": "masterPassword",
+              "value": "${{ secrets.TEST_MASTER_PASSWORD }}",
+              "enabled": true
+            }
+          ]
+        }
+        EOL
+
+    - name: Run Postman collection tests
+      run: |
+        newman run ./postman/collections/master_collection.json \
+          -e newman-environment.json \
+          --reporters cli,htmlextra \
+          --reporter-htmlextra-export postman-results.html \
+          --bail
+
+    - name: Upload Postman test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: postman-test-results
+        path: postman-results.html 
