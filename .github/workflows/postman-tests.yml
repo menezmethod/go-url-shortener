@@ -23,9 +23,11 @@ jobs:
     - name: Install Newman
       run: npm install -g newman newman-reporter-htmlextra
 
-    # Set up Docker Compose
+    # Set up Docker Compose with CI-specific file explicitly
     - name: Set up Docker Compose
       uses: isbang/compose-action@v1.5.1
+      with:
+        compose-file: "./docker-compose.ci.yml"
 
     - name: Start services with CI-specific Docker Compose
       run: |
