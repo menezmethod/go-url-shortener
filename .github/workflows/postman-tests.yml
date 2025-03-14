@@ -12,31 +12,8 @@ jobs:
     name: Run Postman Collection Tests
     runs-on: ubuntu-latest
     
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
-          POSTGRES_DB: url_shortener_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.23'
-
-    - name: Install dependencies
-      run: go mod download
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -46,33 +23,53 @@ jobs:
     - name: Install Newman
       run: npm install -g newman newman-reporter-htmlextra
 
-    - name: Build and start application
-      env:
-        POSTGRES_USER: postgres
-        POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
-        POSTGRES_DB: url_shortener_test
-        POSTGRES_HOST: localhost
-        POSTGRES_PORT: 5432
-        MASTER_PASSWORD: ${{ secrets.TEST_MASTER_PASSWORD }}
-        JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
-        BASE_URL: http://localhost:8081
-        ENVIRONMENT: test
+    - name: Create .env.dev file for Docker Compose
       run: |
-        # Build the application
-        go build -o ./build/urlshortener ./cmd/server
+        cat > .env.dev << EOL
+        # API Configuration
+        PORT=8081
+        BASE_URL=http://localhost:8081
+        ENVIRONMENT=test
         
-        # Run database migrations
-        go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-        migrate -path ./migrations/postgres -database "postgres://postgres:${{ secrets.TEST_POSTGRES_PASSWORD }}@localhost:5432/url_shortener_test?sslmode=disable" up
+        # PostgreSQL Configuration
+        POSTGRES_HOST=postgres
+        POSTGRES_PORT=5432
+        POSTGRES_USER=postgres
+        POSTGRES_PASSWORD=${{ secrets.TEST_POSTGRES_PASSWORD }}
+        POSTGRES_DB=url_shortener_test
         
-        # Start the server in background
-        ./build/urlshortener &
+        # Auth Configuration
+        MASTER_PASSWORD=${{ secrets.TEST_MASTER_PASSWORD }}
+        JWT_SECRET=${{ secrets.TEST_JWT_SECRET }}
+        JWT_EXPIRATION=24h
         
-        # Wait for the server to be ready
-        sleep 10
+        # Redis Configuration (optional)
+        REDIS_HOST=redis
+        REDIS_PORT=6379
+        REDIS_PASSWORD=
+        EOL
+
+    - name: Start services with Docker Compose
+      run: |
+        docker-compose --env-file .env.dev build
+        docker-compose --env-file .env.dev up -d
+        
+        # Wait for services to be ready
+        echo "Waiting for services to start..."
+        sleep 15
+        
+        # Debug output
+        echo "Docker Compose services status:"
+        docker-compose ps
+        echo "Container logs:"
+        docker-compose logs --tail=20
 
     - name: Create Newman environment file
       run: |
+        # Extract master password from .env.dev for logging purposes
+        MASTER_PASSWORD=$(grep -E "^MASTER_PASSWORD=" .env.dev | cut -d'=' -f2)
+        echo "Creating Newman environment file with master password from .env.dev: $MASTER_PASSWORD"
+        
         cat > newman-environment.json << EOL
         {
           "name": "URL_Shortener_API_CI_Environment",
@@ -84,12 +81,12 @@ jobs:
             },
             {
               "key": "apiPath",
-              "value": "/api",
+              "value": "api",
               "enabled": true
             },
             {
               "key": "masterPassword",
-              "value": "${{ secrets.TEST_MASTER_PASSWORD }}",
+              "value": "devpassword",
               "enabled": true
             }
           ]
@@ -109,4 +106,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: postman-test-results
-        path: postman-results.html 
+        path: postman-results.html
+        
+    - name: Stop Docker Compose services
+      if: always()
+      run: docker-compose down 

@@ -116,10 +116,11 @@ This project includes a comprehensive Postman collection for API testing. You ca
 
 ### Running Tests Locally
 
-1. Make sure you have the application running locally:
+1. Make sure you have the Docker Compose environment running:
    ```bash
    make run
    ```
+   This will start the application and PostgreSQL in Docker containers.
 
 2. Install Newman (the Postman CLI) if you don't have it already:
    ```bash
@@ -130,12 +131,32 @@ This project includes a comprehensive Postman collection for API testing. You ca
    ```bash
    make test-postman
    ```
-   This will generate an HTML report in the project root called `postman-results.html`.
+   This will:
+   - Check if Docker Compose is running and start it if needed
+   - Create a Newman environment file with the correct API credentials
+   - Run the Postman collection with Newman
+   - Generate an HTML report in the project root called `postman-results.html`
 
-4. Alternatively, you can run Newman directly:
+4. To stop the Docker Compose services when you're done:
    ```bash
-   newman run ./postman/collections/master_collection.json -e ./postman/environments/local.json --reporters cli,htmlextra --reporter-htmlextra-export postman-results.html
+   make docker-compose-down
    ```
+
+### Troubleshooting
+
+If you encounter issues with the Postman tests:
+
+1. Check container status:
+   ```bash
+   make docker-compose-status
+   ```
+
+2. Inspect the container logs:
+   ```bash
+   docker-compose logs
+   ```
+
+3. Ensure the master password in your `.env.dev` file matches what's being used in the Postman collection
 
 ### Running Tests in CI/CD Pipeline
 
@@ -143,8 +164,7 @@ The Postman tests are automatically run as part of the GitHub Actions workflow w
 
 1. Tests are defined in the `.github/workflows/postman-tests.yml` file
 2. The workflow:
-   - Sets up a PostgreSQL database
-   - Builds and starts the application
+   - Sets up Docker Compose with the appropriate environment variables
    - Runs the Postman collection using Newman
    - Generates an HTML report and uploads it as an artifact
 

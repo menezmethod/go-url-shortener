@@ -66,11 +66,12 @@
 							"raw": "{\n    \"master_password\": \"{{masterPassword}}\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/auth/token",
+							"raw": "{{baseUrl}}/{{apiPath}}/auth/token",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
+								"{{apiPath}}",
 								"auth",
 								"token"
 							]
@@ -430,7 +431,7 @@
 		},
 		{
 			"key": "apiPath",
-			"value": "/api",
+			"value": "api",
 			"type": "string"
 		}
 	]

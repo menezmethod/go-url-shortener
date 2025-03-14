@@ -1,6 +1,6 @@
 {
-  "id": "d7f3f26e-5a4c-4d81-9ebf-10d7d6d121a2",
-  "name": "URL Shortener API Environment",
+  "id": "temp-environment",
+  "name": "Temporary API Environment",
   "values": [
     {
       "key": "baseUrl",
@@ -16,7 +16,7 @@
     },
     {
       "key": "masterPassword",
-      "value": "your_master_password_here",
+      "value": "development_master_password",
       "type": "secret",
       "enabled": true
     },
@@ -46,12 +46,9 @@
     },
     {
       "key": "expirationDate",
-      "value": "{{$isoTimestamp}}",
+      "value": "2030-12-31T23:59:59Z",
       "type": "default",
       "enabled": true
     }
-  ],
-  "_postman_variable_scope": "environment",
-  "_postman_exported_at": "2023-04-20T12:00:00.000Z",
-  "_postman_exported_using": "Postman/10.12.0"
+  ]
 } 

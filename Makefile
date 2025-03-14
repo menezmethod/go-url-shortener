@@ -36,8 +36,12 @@ build:
 	@mkdir -p $(BUILD_DIR)
 	@$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/server
 
-# Run the application
-run:
+# Run the application using Docker Compose
+run: docker-compose-restart
+	@echo "Application is running in the background. Use 'docker-compose logs -f' to view logs."
+
+# Run the application locally (renamed the old run command)
+run-local:
 	@$(GORUN) ./cmd/server
 
 # Test the application
@@ -104,13 +108,16 @@ test-postman:
 		echo "Newman not found. Installing..."; \
 		npm install -g newman newman-reporter-htmlextra; \
 	fi
-	@echo "Creating test environment file for Newman..."
-	@if [ -f .env.test ]; then \
-		echo "Using .env.test for test environment..."; \
-		export $$(grep -v '^#' .env.test | xargs); \
-	else \
-		echo "Warning: .env.test not found. Using default environment variables."; \
+	@echo "Ensuring application is running with Docker Compose..."
+	@if ! docker-compose ps | grep -q "Up"; then \
+		echo "Starting application with Docker Compose..."; \
+		make run; \
+		echo "Waiting for application to start..."; \
+		sleep 10; \
 	fi
+	@echo "Creating test environment file for Newman..."
+	@MASTER_PASSWORD=$$(grep -E "^MASTER_PASSWORD=" .env.dev | cut -d'=' -f2)
+	@echo "Using master password from .env.dev: $${MASTER_PASSWORD}"
 	@echo '{' > newman-env.json
 	@echo '  "name": "URL_Shortener_API_Local_Environment",' >> newman-env.json
 	@echo '  "values": [' >> newman-env.json
@@ -121,16 +128,17 @@ test-postman:
 	@echo '    },' >> newman-env.json
 	@echo '    {' >> newman-env.json
 	@echo '      "key": "apiPath",' >> newman-env.json
-	@echo '      "value": "/api",' >> newman-env.json
+	@echo '      "value": "api",' >> newman-env.json
 	@echo '      "enabled": true' >> newman-env.json
 	@echo '    },' >> newman-env.json
 	@echo '    {' >> newman-env.json
 	@echo '      "key": "masterPassword",' >> newman-env.json
-	@echo '      "value": "$(MASTER_PASSWORD)",' >> newman-env.json
+	@echo '      "value": "devpassword",' >> newman-env.json
 	@echo '      "enabled": true' >> newman-env.json
 	@echo '    }' >> newman-env.json
 	@echo '  ]' >> newman-env.json
 	@echo '}' >> newman-env.json
+	@echo "Newman environment file created successfully"
 	@echo "Running Postman collection with Newman..."
 	@newman run ./postman/collections/master_collection.json -e newman-env.json --reporters cli,htmlextra --reporter-htmlextra-export postman-results.html
 	@echo "Test results saved to postman-results.html"
@@ -169,15 +177,26 @@ docker-run: docker-build
 		-e ENVIRONMENT=development \
 		$(DOCKER_IMAGE):$(DOCKER_TAG)
 
-# Docker compose up
+# Docker compose helpers
+docker-compose-restart: docker-compose-down docker-compose-up
+
+# Docker compose up with development environment
 docker-compose-up:
 	@echo "Starting services with Docker Compose..."
-	@docker-compose up -d
+	@docker-compose --env-file .env.dev build
+	@docker-compose --env-file .env.dev up -d
 
 # Docker compose down
 docker-compose-down:
 	@echo "Stopping services with Docker Compose..."
 	@docker-compose down
+
+# Docker compose status
+docker-compose-status:
+	@echo "Docker Compose Status:"
+	@docker-compose ps
+	@echo "\nContainer Logs:"
+	@docker-compose logs --tail=20
 
 # Run database migrations
 migrate-up:
