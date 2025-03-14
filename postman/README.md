@@ -13,7 +13,8 @@ postman/
 │   ├── URL_Shortener_API_Links_Part3.json        # Link statistics
 │   └── URL_Shortener_API_Master.json             # Combined collection for workflow testing
 └── environments/                 # Postman environment files
-    └── URL_Shortener_API_Environment.json        # Environment variables
+    ├── URL_Shortener_API_Environment.json        # Local development environment
+    └── URL_Shortener_API_Production_Environment.json  # Production environment
 ```
 
 ## Setup Instructions
@@ -25,12 +26,22 @@ postman/
    - Select "Folder" and navigate to the `postman/` directory
    - Alternatively, import each file individually
 
-3. Configure the environment:
-   - Select the imported "URL Shortener API Environment" from the environment dropdown in the top right
-   - Click on the eye icon to view and edit environment variables
-   - Update the following variables:
-     - `baseUrl`: The base URL of your API (default: `http://localhost:8081`)
-     - `masterPassword`: Your API's master password for authentication
+3. Configure the environments:
+   - For local development:
+     - Select the imported "URL Shortener API Environment" from the environment dropdown in the top right
+     - Click on the eye icon to view and edit environment variables
+     - Update the following variables:
+       - `baseUrl`: The base URL of your API (default: `http://localhost:8081`)
+       - `masterPassword`: Your API's master password for authentication
+   
+   - For production testing:
+     - Select the imported "URL Shortener API Production Environment" from the environment dropdown
+     - Click on the eye icon to view and edit environment variables
+     - Update the following variables:
+       - `masterPassword`: Your API's master password for authentication (production)
+     - Note: `baseUrl` is already set to `https://rsto.us` for production
+
+4. Switch between environments using the dropdown in the top right corner of Postman to test against different environments.
 
 ## Using the Collections
 
@@ -103,8 +114,11 @@ These collections can be integrated with CI/CD pipelines using [Newman](https://
 # Install Newman
 npm install -g newman
 
-# Run the master collection with the environment
+# Run the master collection with the local development environment
 newman run ./postman/collections/URL_Shortener_API_Master.json -e ./postman/environments/URL_Shortener_API_Environment.json
+
+# Run the master collection with the production environment
+newman run ./postman/collections/URL_Shortener_API_Master.json -e ./postman/environments/URL_Shortener_API_Production_Environment.json
 ```
 
 ## Debugging Failed Tests

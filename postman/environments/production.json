@@ -1,22 +1,22 @@
 {
-  "id": "d7f3f26e-5a4c-4d81-9ebf-10d7d6d121a2",
-  "name": "URL Shortener API Environment",
+  "id": "f8e9d7c6-b5a4-3c2d-1e0f-9a8b7c6d5e4f",
+  "name": "RFTO.us API Production Environment",
   "values": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8081",
+      "value": "https://rfto.us",
       "type": "default",
       "enabled": true
     },
     {
       "key": "apiPath",
-      "value": "/api",
+      "value": "api",
       "type": "default",
       "enabled": true
     },
     {
       "key": "masterPassword",
-      "value": "your_master_password",
+      "value": "",
       "type": "secret",
       "enabled": true
     },
